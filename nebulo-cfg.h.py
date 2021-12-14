@@ -1,30 +1,56 @@
 #!/usr/bin/env python3
 
 configshape_in = """
+Bool        has_wifi
+Bool        has_lora
+Hex		    appeui
+Hex 		deveui
+Hex 		appkey
+Bool		send2lora
 String		current_lang
-String		wlanssid
-Password	wlanpwd
+String      wlanssid
+Password    wlanpwd
 String		www_username
 Password	www_password
 String		fs_ssid
 Password	fs_pwd
 Bool		www_basicauth_enabled
-Time		calling_intervall_ms
+Bool		sds_read
+Bool		npm_read
+Bool		bmx280_read
+String		height_above_sealevel
+Bool		gps_read
+Bool		send2dusti
+Bool		ssl_dusti
+Bool		send2madavi
+Bool		ssl_madavi
+Bool		send2csv
+Bool		has_display
+Bool		has_ssd1306
+Bool		has_flipped_display
+Bool		display_wifi_info
+Bool		display_device_info
+String		static_ip
+String		static_subnet
+String		static_gateway
+String		static_dns
+UInt		debug
+Time		sending_intervall_ms
 Time		time_for_wifi_config
-String      sensors_chosen
-Bool		random_order
-Bool		auto_change
-Bool		fade_led
-UInt        pm_choice 
-Int  		time_offset
+Bool		send2custom
+String		host_custom
+String		url_custom
+UInt		port_custom
+String		user_custom
+Password	pwd_custom
+Bool		ssl_custom
 """
-#can use Uchar? for 0-255 
 
-with open("/Users/PJ/CODES/PIO_projects/SC_pendule/clock-cfg.h", "w") as h:
+with open("nebulo-cfg.h", "w") as h:
     print("""
 
 // This file is generated, please do not edit.
-// Change clock-cfg.h.py instead.
+// Change airrohr-cfg.h.py instead.
 
 enum ConfigEntryType : unsigned short {
 	Config_Type_Bool,
@@ -32,7 +58,7 @@ enum ConfigEntryType : unsigned short {
 	Config_Type_Time,
 	Config_Type_String,
 	Config_Type_Password,
-    Config_Type_Int
+    Config_Type_Hex
 };
 
 struct ConfigShapeEntry {
@@ -44,7 +70,6 @@ struct ConfigShapeEntry {
 		bool* as_bool;
 		unsigned int* as_uint;
 		char* as_str;
-        int* as_int;
 	} cfg_val;
 	const __FlashStringHelper* cfg_key() const { return FPSTR(_cfg_key); }
 };
@@ -67,6 +92,6 @@ enum ConfigShapeId {""", file=h)
         print("\t{ Config_Type_", cfgtype,
               ", sizeof(cfg::" + cfgkey + ")-1" if cfgtype in ('String', 'Password') else ", 0",
               ", CFG_KEY_", cfgkey.upper(),
-              ", ", "" if cfgtype in ('String', 'Password') else "&",
+              ", ", "" if cfgtype in ('String', 'Password','Hex') else "&",
               "cfg::", cfgkey, " },", sep='', file=h)
     print("};", file=h)
