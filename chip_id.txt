@@ -1,7 +1,0 @@
-  uint64_t chipid_num;
-  chipid_num = ESP.getEfuseMac();
-  esp_chipid = String((uint16_t)(chipid_num >> 32), HEX);
-  esp_chipid += String((uint32_t)chipid_num, HEX);
-  Serial.printf("ESP32ChipID=%u\n", chipid_num);
-  Serial.printf("ESP32ChipID=%04X", (uint16_t)(chipid_num >> 32)); //print High 2 bytes
-  Serial.printf("%08X\n", (uint32_t)chipid_num); //print Low 4bytes.
