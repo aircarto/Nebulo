@@ -6,7 +6,6 @@ Bool        has_lora
 Hex		    appeui
 Hex 		deveui
 Hex 		appkey
-Bool		send2lora
 String		current_lang
 String      wlanssid
 Password    wlanpwd
@@ -30,10 +29,6 @@ Bool		has_ssd1306
 Bool		has_flipped_display
 Bool		display_wifi_info
 Bool		display_device_info
-String		static_ip
-String		static_subnet
-String		static_gateway
-String		static_dns
 UInt		debug
 Time		sending_intervall_ms
 Time		time_for_wifi_config
@@ -44,13 +39,20 @@ UInt		port_custom
 String		user_custom
 Password	pwd_custom
 Bool		ssl_custom
+Bool		send2custom2
+String		host_custom2
+String		url_custom2
+UInt		port_custom2
+String		user_custom2
+Password	pwd_custom2
+Bool		ssl_custom2
 """
 
 with open("nebulo-cfg.h", "w") as h:
     print("""
 
 // This file is generated, please do not edit.
-// Change airrohr-cfg.h.py instead.
+// Change nebulo-cfg.h.py instead.
 
 enum ConfigEntryType : unsigned short {
 	Config_Type_Bool,
@@ -90,8 +92,8 @@ enum ConfigShapeId {""", file=h)
     for cfgentry in configshape_in.strip().split('\n'):
         cfgtype, cfgkey = cfgentry.split()
         print("\t{ Config_Type_", cfgtype,
-              ", sizeof(cfg::" + cfgkey + ")-1" if cfgtype in ('String', 'Password') else ", 0",
+              ", sizeof(cfg::" + cfgkey + ")-1" if cfgtype in ('String', 'Password', 'Hex') else ", 0",
               ", CFG_KEY_", cfgkey.upper(),
-              ", ", "" if cfgtype in ('String', 'Password','Hex') else "&",
+              ", ", "" if cfgtype in ('String', 'Password', 'Hex') else "&",
               "cfg::", cfgkey, " },", sep='', file=h)
     print("};", file=h)

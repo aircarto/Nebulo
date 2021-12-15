@@ -27,7 +27,6 @@ String SOFTWARE_VERSION(SOFTWARE_VERSION_STR);
 // includes external libraries
 #include "./oledfont.h" // avoids including the default Arial font, needs to be included before SSD1306.h
 #include <SSD1306.h>
-#include <LiquidCrystal_I2C.h>
 #define ARDUINOJSON_ENABLE_ARDUINO_STREAM 0
 #define ARDUINOJSON_ENABLE_ARDUINO_PRINT 0
 #define ARDUINOJSON_DECODE_UNICODE 0
@@ -63,11 +62,6 @@ namespace cfg
 	char wlanssid[LEN_WLANSSID];
 	char wlanpwd[LEN_CFG_PASSWORD];
 
-	char static_ip[16];
-	char static_subnet[16];
-	char static_gateway[16];
-	char static_dns[16];
-
 	// credentials of the sensor in access point mode
 	char fs_ssid[LEN_FS_SSID] = FS_SSID;
 	char fs_pwd[LEN_CFG_PASSWORD] = FS_PWD;
@@ -76,10 +70,9 @@ namespace cfg
 
 	bool has_wifi = HAS_WIFI;
 	bool has_lora = HAS_LORA;
-	char appeui[LEN_APPEUI] = APPEUI;
-	char deveui[LEN_DEVEUI] = DEVEUI;
-	char appkey[LEN_APPKEY] = APPKEY;
-	bool send2lora = SEND2LORA;
+	char appeui[LEN_APPEUI];
+	char deveui[LEN_DEVEUI];
+	char appkey[LEN_APPKEY];
 
 	// (in)active sensors
 	bool sds_read = SDS_READ;
@@ -92,6 +85,7 @@ namespace cfg
 	bool send2dusti = SEND2SENSORCOMMUNITY;
 	bool send2madavi = SEND2MADAVI;
 	bool send2custom = SEND2CUSTOM;
+	bool send2custom2 = SEND2CUSTOM2;
 	bool send2csv = SEND2CSV;
 
 	// (in)active displays
@@ -105,12 +99,22 @@ namespace cfg
 	// API settings
 	bool ssl_madavi = SSL_MADAVI;
 	bool ssl_dusti = SSL_SENSORCOMMUNITY;
+
+	//API AirCarto
 	char host_custom[LEN_HOST_CUSTOM];
 	char url_custom[LEN_URL_CUSTOM];
 	bool ssl_custom = SSL_CUSTOM;
 	unsigned port_custom = PORT_CUSTOM;
 	char user_custom[LEN_USER_CUSTOM] = USER_CUSTOM;
 	char pwd_custom[LEN_CFG_PASSWORD] = PWD_CUSTOM;
+
+	//API AtmoSud
+	char host_custom2[LEN_HOST_CUSTOM2];
+	char url_custom2[LEN_URL_CUSTOM2];
+	bool ssl_custom2 = SSL_CUSTOM2;
+	unsigned port_custom2 = PORT_CUSTOM2;
+	char user_custom2[LEN_USER_CUSTOM2] = USER_CUSTOM2;
+	char pwd_custom2[LEN_CFG_PASSWORD] = PWD_CUSTOM2;
 
 	void initNonTrivials(const char *id)
 	{
@@ -124,6 +128,8 @@ namespace cfg
 		strcpy_P(wlanpwd, WLANPWD);
 		strcpy_P(host_custom, HOST_CUSTOM);
 		strcpy_P(url_custom, URL_CUSTOM);
+		strcpy_P(host_custom2, HOST_CUSTOM2);
+		strcpy_P(url_custom2, URL_CUSTOM2);
 
 		if (!*fs_ssid)
 		{
@@ -253,7 +259,7 @@ int last_disconnect_reason;
 
 //chipID variables
 String esp_chipid;
-String esp_mac_id;
+//String esp_mac_id;
 String last_value_SDS_version;
 String last_value_NPM_version;
 
@@ -513,7 +519,7 @@ static void readConfig(bool oldconfig = false)
 
 	if (!err)
 	{
-		//serializeJsonPretty(json, Debug);
+		serializeJsonPretty(json, Debug);
 		debug_outln_info(F("parsed json..."));
 		for (unsigned e = 0; e < sizeof(configShape) / sizeof(configShape[0]); ++e)
 		{
@@ -625,6 +631,11 @@ static void createLoggerConfigs()
 	{
 		loggerConfigs[LoggerCustom].session = new_session();
 	}
+	loggerConfigs[LoggerCustom2].destport = cfg::port_custom2;
+	if (cfg::send2custom2 && (cfg::ssl_custom2 || (cfg::port_custom2 == 443)))
+	{
+		loggerConfigs[LoggerCustom2].session = new_session();
+	}
 }
 
 /*****************************************************************
@@ -679,8 +690,8 @@ static void start_html_page(String &page_content, const String &title)
 		s.replace("{n}", emptyString);
 	}
 	s.replace("{id}", esp_chipid);
-	s.replace("{macid}", esp_mac_id);
-	s.replace("{mac}", WiFi.macAddress());
+	//s.replace("{macid}", esp_mac_id);
+	//s.replace("{mac}", WiFi.macAddress());
 	page_content += s;
 }
 
@@ -719,7 +730,6 @@ static void add_form_input(String &page_content, const ConfigShapeId cfgid, cons
 			info = FPSTR(INTL_PASSWORD);
 	case Config_Type_Hex:
 		s.replace("{t}", F("hex"));
-		info = FPSTR(INTL_PASSWORD);
 	default:
 			t_value = c.cfg_val.as_str;
 			t_value.replace("'", "&#39;");
@@ -775,8 +785,8 @@ static String form_select_lang()
 				 "<td>" INTL_LANGUAGE ":&nbsp;</td>"
 				 "<td>"
 				 "<select id='current_lang' name='current_lang'>"
-				 "<option value='EN'>English (EN)</option>"
 				 "<option value='FR'>Français (FR)</option>"
+				 "<option value='EN'>English (EN)</option>"
 				 "</select>"
 				 "</td>"
 				 "</tr>");
@@ -887,15 +897,20 @@ static void webserver_config_send_body_get(String &page_content)
 					  "<input class='radio' id='r2' name='group' type='radio'>"
 					  "<input class='radio' id='r3' name='group' type='radio'>"
 					  "<input class='radio' id='r4' name='group' type='radio'>"
+					  "<input class='radio' id='r5' name='group' type='radio'>"
 					  "<div class='tabs'>"
 					  "<label class='tab' id='tab1' for='r1'>" INTL_WIFI_SETTINGS "</label>"
 					  "<label class='tab' id='tab2' for='r2'>");
-	page_content += FPSTR(INTL_MORE_SETTINGS);
+	page_content += FPSTR(INTL_LORA_SETTINGS);
 	page_content += F("</label>"
 					  "<label class='tab' id='tab3' for='r3'>");
-	page_content += FPSTR(INTL_SENSORS);
+	page_content += FPSTR(INTL_MORE_SETTINGS);
 	page_content += F("</label>"
-					  "<label class='tab' id='tab4' for='r4'>APIs"
+					  "<label class='tab' id='tab4' for='r4'>");
+	page_content += FPSTR(INTL_SENSORS);
+	page_content += F(
+					 "</label>"
+				     "<label class='tab' id='tab5' for='r5'>APIs"
 					  "</label></div><div class='panels'>"
 					  "<div class='panel' id='panel1'>");
 
@@ -903,6 +918,7 @@ static void webserver_config_send_body_get(String &page_content)
 	{ // scan for wlan ssids
 		page_content += F("<div id='wifilist'>" INTL_WIFI_NETWORKS "</div><br/>");
 	}
+	add_form_checkbox(Config_has_wifi, FPSTR(INTL_WIFI_ACTIVATION));
 	page_content += FPSTR(TABLE_TAG_OPEN);
 	add_form_input(page_content, Config_wlanssid, FPSTR(INTL_FS_WIFI_NAME), LEN_WLANSSID - 1);
 	add_form_input(page_content, Config_wlanpwd, FPSTR(INTL_PASSWORD), LEN_CFG_PASSWORD - 1);
@@ -942,6 +958,17 @@ static void webserver_config_send_body_get(String &page_content)
 	}
 
 	page_content = tmpl(FPSTR(WEB_DIV_PANEL), String(2));
+	page_content += FPSTR(WEB_LF_B);
+	page_content += FPSTR(INTL_LORA_EXPLANATION);
+	page_content += FPSTR(WEB_B_BR_BR);
+	add_form_checkbox(Config_has_lora, FPSTR(INTL_LORA_ACTIVATION)); ////////
+	page_content += FPSTR(TABLE_TAG_OPEN);
+	add_form_input(page_content, Config_appeui, FPSTR("APPEUI"), LEN_APPEUI - 1);
+	add_form_input(page_content, Config_deveui, FPSTR("DEVEUI"), LEN_DEVEUI - 1);
+	add_form_input(page_content, Config_appkey, FPSTR("APPKEY"), LEN_APPKEY - 1);
+	page_content += FPSTR(TABLE_TAG_CLOSE_BR);
+	server.sendContent(page_content);
+	page_content = tmpl(FPSTR(WEB_DIV_PANEL), String(3));
 
 	add_form_checkbox(Config_has_display, FPSTR(INTL_DISPLAY));
 	add_form_checkbox(Config_has_ssd1306, FPSTR(INTL_SH1106));
@@ -954,14 +981,6 @@ static void webserver_config_send_body_get(String &page_content)
 	add_form_checkbox(Config_display_wifi_info, FPSTR(INTL_DISPLAY_WIFI_INFO));
 	add_form_checkbox(Config_display_device_info, FPSTR(INTL_DISPLAY_DEVICE_INFO));
 
-	page_content += FPSTR(WEB_BR_LF_B);
-	page_content += F(INTL_STATIC_IP_TEXT "</b><br/>");
-	add_form_input(page_content, Config_static_ip, FPSTR(INTL_STATIC_IP), 15);
-	add_form_input(page_content, Config_static_subnet, FPSTR(INTL_STATIC_SUBNET), 15);
-	add_form_input(page_content, Config_static_gateway, FPSTR(INTL_STATIC_GATEWAY), 15);
-	add_form_input(page_content, Config_static_dns, FPSTR(INTL_STATIC_DNS), 15);
-	page_content += FPSTR(BR_TAG);
-
 	server.sendContent(page_content);
 	page_content = FPSTR(WEB_BR_LF_B);
 	page_content += F(INTL_FIRMWARE "</b>&nbsp;");
@@ -969,13 +988,6 @@ static void webserver_config_send_body_get(String &page_content)
 	page_content += FPSTR(TABLE_TAG_OPEN);
 	page_content += form_select_lang();
 	page_content += FPSTR(TABLE_TAG_CLOSE_BR);
-
-	page_content += F("<script>"
-					  "var $ = function(e) { return document.getElementById(e); };"
-					  "function updateOTAOptions() { "
-					  "$('current_lang').disabled = $('use_beta').disabled = !$('auto_update').checked; "
-					  "}; updateOTAOptions(); $('auto_update').onchange = updateOTAOptions;"
-					  "</script>");
 
 	page_content += FPSTR(TABLE_TAG_OPEN);
 	add_form_input(page_content, Config_debug, FPSTR(INTL_DEBUG_LEVEL), 1);
@@ -985,7 +997,7 @@ static void webserver_config_send_body_get(String &page_content)
 
 	server.sendContent(page_content);
 
-	page_content = tmpl(FPSTR(WEB_DIV_PANEL), String(3));
+	page_content = tmpl(FPSTR(WEB_DIV_PANEL), String(4));
 	add_form_checkbox_sensor(Config_sds_read, FPSTR(INTL_SDS011));
 
 	// Paginate page after ~ 1500 Bytes  //ATTENTION RYTHME PAGINATION !
@@ -994,9 +1006,9 @@ static void webserver_config_send_body_get(String &page_content)
 
 	add_form_checkbox_sensor(Config_bmx280_read, FPSTR(INTL_BMX280));
 
-	// Paginate page after ~ 1500 Bytes
-	server.sendContent(page_content);
-	page_content = emptyString;
+	// // Paginate page after ~ 1500 Bytes
+	// server.sendContent(page_content);
+	// page_content = emptyString;
 
 	page_content += FPSTR(TABLE_TAG_OPEN);
 	add_form_input(page_content, Config_height_above_sealevel, FPSTR(INTL_HEIGHT_ABOVE_SEALEVEL), LEN_HEIGHT_ABOVE_SEALEVEL - 1);
@@ -1011,7 +1023,7 @@ static void webserver_config_send_body_get(String &page_content)
 
 	// Paginate page after ~ 1500 Bytes
 	server.sendContent(page_content);
-	page_content = tmpl(FPSTR(WEB_DIV_PANEL), String(4));
+	page_content = tmpl(FPSTR(WEB_DIV_PANEL), String(5));
 
 	page_content += tmpl(FPSTR(INTL_SEND_TO), F("APIs"));
 	page_content += FPSTR(BR_TAG);
@@ -1024,10 +1036,10 @@ static void webserver_config_send_body_get(String &page_content)
 	page_content += form_checkbox(Config_ssl_madavi, FPSTR(WEB_HTTPS), false);
 	page_content += FPSTR(WEB_BRACE_BR);
 	add_form_checkbox(Config_send2csv, FPSTR(WEB_CSV));
-	page_content += FPSTR(TABLE_TAG_OPEN);
 
 	server.sendContent(page_content);
-	page_content = FPSTR(TABLE_TAG_CLOSE_BR);
+	page_content = emptyString;
+
 	page_content += FPSTR(BR_TAG);
 	page_content += form_checkbox(Config_send2custom, FPSTR(INTL_SEND_TO_OWN_API), false);
 	page_content += FPSTR(WEB_NBSP_NBSP_BRACE);
@@ -1044,12 +1056,19 @@ static void webserver_config_send_body_get(String &page_content)
 	page_content += FPSTR(TABLE_TAG_CLOSE_BR);
 
 	page_content += FPSTR(BR_TAG);
+	page_content += form_checkbox(Config_send2custom2, FPSTR(INTL_SEND_TO_OWN_API2), false);
+	page_content += FPSTR(WEB_NBSP_NBSP_BRACE);
+	page_content += form_checkbox(Config_ssl_custom2, FPSTR(WEB_HTTPS), false);
+	page_content += FPSTR(WEB_BRACE_BR);
 
 	server.sendContent(page_content);
 
-	page_content += FPSTR(WEB_NBSP_NBSP_BRACE);
-	page_content += FPSTR(WEB_BRACE_BR);
-	page_content += FPSTR(TABLE_TAG_OPEN);
+	page_content = FPSTR(TABLE_TAG_OPEN);
+	add_form_input(page_content, Config_host_custom2, FPSTR(INTL_SERVER2), LEN_HOST_CUSTOM2 - 1);
+	add_form_input(page_content, Config_url_custom2, FPSTR(INTL_PATH2), LEN_URL_CUSTOM2 - 1);
+	add_form_input(page_content, Config_port_custom2, FPSTR(INTL_PORT2), MAX_PORT_DIGITS2);
+	add_form_input(page_content, Config_user_custom2, FPSTR(INTL_USER2), LEN_USER_CUSTOM2 - 1);
+	add_form_input(page_content, Config_pwd_custom2, FPSTR(INTL_PASSWORD2), LEN_CFG_PASSWORD2 - 1);
 	page_content += FPSTR(TABLE_TAG_CLOSE_BR);
 	page_content += F("</div></div>");
 	page_content += form_submit(FPSTR(INTL_SAVE_AND_RESTART));
@@ -1059,7 +1078,6 @@ static void webserver_config_send_body_get(String &page_content)
 	{ // scan for wlan ssids
 		page_content += F("<script>window.setTimeout(load_wifi_list,1000);</script>");
 	}
-
 	server.sendContent(page_content);
 	page_content = emptyString;
 }
@@ -1101,7 +1119,6 @@ static void webserver_config_send_body_post(String &page_content)
 			}
 			break;
 		case Config_Type_Hex:
-			//REVOIR LE TRAITEMENT DE LA STRING ICI ?
 			strncpy(c.cfg_val.as_str, server_arg.c_str(), c.cfg_len);
 			c.cfg_val.as_str[c.cfg_len] = '\0';
 			break;
@@ -1710,8 +1727,14 @@ static void webserver_favicon()
 {
 	server.sendHeader(F("Cache-Control"), F("max-age=2592000, public"));
 
+	// server.send_P(200, TXT_CONTENT_TYPE_IMAGE_PNG,
+	// 			  LUFTDATEN_INFO_LOGO_PNG, LUFTDATEN_INFO_LOGO_PNG_SIZE);
+
+	// server.send_P(200, TXT_CONTENT_TYPE_IMAGE_SVG,
+	// 			  AIRCARTO_INFO_LOGO_SVG, AIRCARTO_INFO_LOGO_SVG_SIZE);
+
 	server.send_P(200, TXT_CONTENT_TYPE_IMAGE_PNG,
-				  LUFTDATEN_INFO_LOGO_PNG, LUFTDATEN_INFO_LOGO_PNG_SIZE);
+				  AIRCARTO_INFO_LOGO_PNG, AIRCARTO_INFO_LOGO_PNG_SIZE);
 }
 
 /*****************************************************************
@@ -1744,8 +1767,14 @@ static void webserver_static()
 
 	if (server.arg(String('r')) == F("logo"))
 	{
+		//  server.send_P(200, TXT_CONTENT_TYPE_IMAGE_PNG,
+		//  			  LUFTDATEN_INFO_LOGO_PNG, LUFTDATEN_INFO_LOGO_PNG_SIZE);
+
+		// server.send_P(200, TXT_CONTENT_TYPE_IMAGE_SVG,
+		// 			  AIRCARTO_INFO_LOGO_SVG, AIRCARTO_INFO_LOGO_SVG_SIZE);
+
 		server.send_P(200, TXT_CONTENT_TYPE_IMAGE_PNG,
-					  LUFTDATEN_INFO_LOGO_PNG, LUFTDATEN_INFO_LOGO_PNG_SIZE);
+					  AIRCARTO_INFO_LOGO_PNG, AIRCARTO_INFO_LOGO_PNG_SIZE);
 	}
 	else if (server.arg(String('r')) == F("css"))
 	{
@@ -1781,7 +1810,8 @@ static void setup_webserver()
 	server.on(F(STATIC_PREFIX), webserver_static);
 	server.onNotFound(webserver_not_found);
 
-	debug_outln_info(F("Starting Webserver... "), WiFi.localIP().toString());
+	//debug_outln_info(F("Starting Webserver... "), WiFi.localIP().toString());
+	debug_outln_info(F("Starting Webserver... "));
 	server.begin();
 }
 
@@ -1887,6 +1917,10 @@ static void wifiConfig()
 	wifi.nchan = 13;
 	wifi.schan = 1;
 
+//The station mode starts only if WiFi communication is enabled.
+
+if(cfg::has_wifi){
+
 	WiFi.mode(WIFI_STA);
 
 	dnsServer.stop();
@@ -1896,19 +1930,27 @@ static void wifiConfig()
 
 	WiFi.begin(cfg::wlanssid, cfg::wlanpwd);
 
-	debug_outln_info(F("---- Result Webconfig ----"));
-	debug_outln_info(F("WLANSSID: "), cfg::wlanssid);
-	debug_outln_info(FPSTR(DBG_TXT_SEP));
-	debug_outln_info_bool(F("SDS: "), cfg::sds_read);
-	debug_outln_info_bool(F("NPM: "), cfg::npm_read);
-	debug_outln_info(FPSTR(DBG_TXT_SEP));
-	debug_outln_info_bool(F("SensorCommunity: "), cfg::send2dusti);
-	debug_outln_info_bool(F("Madavi: "), cfg::send2madavi);
-	debug_outln_info_bool(F("CSV: "), cfg::send2csv);
-	debug_outln_info(FPSTR(DBG_TXT_SEP));
-	debug_outln_info_bool(F("Display: "), cfg::has_display);
-	debug_outln_info(F("Debug: "), String(cfg::debug));
-	wificonfig_loop = false;
+}
+debug_outln_info(F("---- Result Webconfig ----"));
+debug_outln_info(F("WiFi: "), cfg::has_wifi);
+debug_outln_info(F("LoRa: "), cfg::has_lora);
+debug_outln_info(F("APPEUI: "), cfg::appeui);
+debug_outln_info(F("DEVEUI: "), cfg::deveui);
+debug_outln_info(F("APPKEY: "), cfg::appkey);
+debug_outln_info(F("WLANSSID: "), cfg::wlanssid);
+debug_outln_info(FPSTR(DBG_TXT_SEP));
+debug_outln_info_bool(F("SDS: "), cfg::sds_read);
+debug_outln_info_bool(F("NPM: "), cfg::npm_read);
+debug_outln_info(FPSTR(DBG_TXT_SEP));
+debug_outln_info_bool(F("SensorCommunity: "), cfg::send2dusti);
+debug_outln_info_bool(F("Madavi: "), cfg::send2madavi);
+debug_outln_info_bool(F("CSV: "), cfg::send2csv);
+debug_outln_info_bool(F("AirCarto: "), cfg::send2custom);
+debug_outln_info_bool(F("AtmoSud: "), cfg::send2custom2);
+debug_outln_info(FPSTR(DBG_TXT_SEP));
+debug_outln_info_bool(F("Display: "), cfg::has_display);
+debug_outln_info(F("Debug: "), String(cfg::debug));
+wificonfig_loop = false; //VOIR ICI
 }
 
 static void waitForWifiToConnect(int maxRetries)
@@ -2021,7 +2063,7 @@ static unsigned long sendData(const LoggerEntry logger, const String &data, cons
 
 	HTTPClient http;
 	http.setTimeout(20 * 1000);
-	http.setUserAgent(SOFTWARE_VERSION + '/' + esp_chipid + '/' + esp_mac_id);
+	http.setUserAgent(SOFTWARE_VERSION + '/' + esp_chipid);
 	http.setReuse(false);
 	bool send_success = false;
 	if (logger == LoggerCustom && (*cfg::user_custom || *cfg::pwd_custom))
@@ -2032,7 +2074,7 @@ static unsigned long sendData(const LoggerEntry logger, const String &data, cons
 	{
 		http.addHeader(F("Content-Type"), contentType);
 		http.addHeader(F("X-Sensor"), String(F(SENSOR_BASENAME)) + esp_chipid);
-		http.addHeader(F("X-MAC-ID"), String(F(SENSOR_BASENAME)) + esp_mac_id);
+		//http.addHeader(F("X-MAC-ID"), String(F(SENSOR_BASENAME)) + esp_mac_id);
 		if (pin)
 		{
 			http.addHeader(F("X-PIN"), String(pin));
@@ -3112,7 +3154,6 @@ static void logEnabledAPIs()
 		debug_outln_info(F("sensor.community"));
 	}
 
-
 	if (cfg::send2madavi)
 	{
 		debug_outln_info(F("Madavi.de"));
@@ -3125,7 +3166,11 @@ static void logEnabledAPIs()
 
 	if (cfg::send2custom)
 	{
-		debug_outln_info(F("custom API"));
+		debug_outln_info(F("AirCarto API"));
+	}
+	if (cfg::send2custom2)
+	{
+		debug_outln_info(F("Atmosud API"));
 	}
 }
 
@@ -3161,12 +3206,24 @@ static unsigned long sendDataToOptionalApis(const String &data)
 	{
 		String data_to_send = data;
 		data_to_send.remove(0, 1);
-		String data_4_custom(F("{\"esp8266id\": \""));
+		String data_4_custom(F("{\"nebuloid\": \""));
 		data_4_custom += esp_chipid;
 		data_4_custom += "\", ";
 		data_4_custom += data_to_send;
-		debug_outln_info(FPSTR(DBG_TXT_SENDING_TO), F("custom api: "));
+		debug_outln_info(FPSTR(DBG_TXT_SENDING_TO), F("aircarto api: "));
 		sum_send_time += sendData(LoggerCustom, data_4_custom, 0, cfg::host_custom, cfg::url_custom);
+	}
+
+	if (cfg::send2custom2)
+	{
+		String data_to_send = data;
+		data_to_send.remove(0, 1);
+		String data_4_custom(F("{\"nebuloid\": \""));
+		data_4_custom += esp_chipid;
+		data_4_custom += "\", ";
+		data_4_custom += data_to_send;
+		debug_outln_info(FPSTR(DBG_TXT_SENDING_TO), F("atmosud api: "));
+		sum_send_time += sendData(LoggerCustom2, data_4_custom, 0, cfg::host_custom2, cfg::url_custom2);
 	}
 
 	if (cfg::send2csv)
@@ -3261,14 +3318,14 @@ void os_getDevEui(u1_t *buf) { memcpy_P(buf, deveui_hex, 8); }
 static const u1_t PROGMEM appkey_hex[16] = {};
 void os_getDevKey(u1_t *buf) { memcpy_P(buf, appkey_hex, 16); }
 
-static uint8_t datalora[20] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}; //DEFINIR LA SIZE
+//DEFINIR LA SIZE AJOUTER PM1!!!!!!!!!!!!!!!
+static uint8_t datalora_sds[21] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+static uint8_t datalora_npm[25] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 static osjob_t sendjob;
 
 // Schedule TX every this many seconds (might become longer due to duty
 // cycle limitations).
-//const unsigned TX_INTERVAL = 60;
-
-//unsigned sending_intervall_ms = 145000;
+//const unsigned TX_INTERVAL = 60; // Replaced with cfg::time_send
 
 void printHex2(unsigned v)
 {
@@ -3289,7 +3346,21 @@ void do_send(osjob_t *j)
 	else
 	{
 		// Prepare upstream data transmission at the next possible time.
-		LMIC_setTxData2(1, datalora, sizeof(datalora) - 1, 0);
+
+		if(cfg::sds_read)
+		{
+			LMIC_setTxData2(1, datalora_sds, sizeof(datalora_sds) - 1, 0);
+		}
+
+		if(cfg::npm_read)
+		{
+			LMIC_setTxData2(1, datalora_npm, sizeof(datalora_npm) - 1, 0);
+		}
+
+// u1_t port is the FPort used for the transmission. Default is 1. 
+// You can send different kind of data using different FPorts, 
+// so the payload decoder can extract the information depending on the port used.
+
 		Debug.println(F("Packet queued"));
 	}
 	// Next TX is scheduled after TX_COMPLETE event.
@@ -3431,50 +3502,106 @@ static void prepareTxFrame()
 		byte temp_byte[4];
 	} u;
 
+if(cfg::sds_read){
 	u.temp_float = last_value_SDS_P1;
 
-	datalora[0] = u.temp_byte[0];
-	datalora[1] = u.temp_byte[1];
-	datalora[2] = u.temp_byte[2];
-	datalora[3] = u.temp_byte[3];
+	datalora_sds[0] = u.temp_byte[0];
+	datalora_sds[1] = u.temp_byte[1];
+	datalora_sds[2] = u.temp_byte[2];
+	datalora_sds[3] = u.temp_byte[3];
 
 	u.temp_float = last_value_SDS_P2;
 
-	datalora[4] = u.temp_byte[0];
-	datalora[5] = u.temp_byte[1];
-	datalora[6] = u.temp_byte[2];
-	datalora[7] = u.temp_byte[3];
+	datalora_sds[4] = u.temp_byte[0];
+	datalora_sds[5] = u.temp_byte[1];
+	datalora_sds[6] = u.temp_byte[2];
+	datalora_sds[7] = u.temp_byte[3];
 
 	u.temp_float = last_value_BMX280_T;
 
-	datalora[8] = u.temp_byte[0];
-	datalora[9] = u.temp_byte[1];
-	datalora[10] = u.temp_byte[2];
-	datalora[11] = u.temp_byte[3];
+	datalora_sds[8] = u.temp_byte[0];
+	datalora_sds[9] = u.temp_byte[1];
+	datalora_sds[10] = u.temp_byte[2];
+	datalora_sds[11] = u.temp_byte[3];
 
 	u.temp_float = last_value_BMX280_P;
 
-	datalora[12] = u.temp_byte[0];
-	datalora[13] = u.temp_byte[1];
-	datalora[14] = u.temp_byte[2];
-	datalora[15] = u.temp_byte[3];
+	datalora_sds[12] = u.temp_byte[0];
+	datalora_sds[13] = u.temp_byte[1];
+	datalora_sds[14] = u.temp_byte[2];
+	datalora_sds[15] = u.temp_byte[3];
 
 	u.temp_float = last_value_BME280_H;
 
-	datalora[16] = u.temp_byte[0];
-	datalora[17] = u.temp_byte[1];
-	datalora[18] = u.temp_byte[2];
-	datalora[19] = u.temp_byte[3];
+	datalora_sds[16] = u.temp_byte[0];
+	datalora_sds[17] = u.temp_byte[1];
+	datalora_sds[18] = u.temp_byte[2];
+	datalora_sds[19] = u.temp_byte[3];
 
-	Serial.printf("HEX values:\n");
+	Debug.printf("HEX values:\n");
 	for (int i = 0; i < 20; i++)
 	{
-		Debug.printf(" %02x", datalora[i]);
+		Debug.printf(" %02x", datalora_sds[i]);
 		if (i == 19)
 		{
 			Debug.printf("\n");
 		}
 	}
+}
+if (cfg::npm_read)
+{
+	u.temp_float = last_value_NPM_P0;
+
+	datalora_npm[0] = u.temp_byte[0];
+	datalora_npm[1] = u.temp_byte[1];
+	datalora_npm[2] = u.temp_byte[2];
+	datalora_npm[3] = u.temp_byte[3];
+
+	u.temp_float = last_value_NPM_P1;
+
+	datalora_npm[4] = u.temp_byte[0];
+	datalora_npm[5] = u.temp_byte[1];
+	datalora_npm[6] = u.temp_byte[2];
+	datalora_npm[7] = u.temp_byte[3];
+
+	u.temp_float = last_value_NPM_P2;
+
+	datalora_npm[8] = u.temp_byte[0];
+	datalora_npm[9] = u.temp_byte[1];
+	datalora_npm[10] = u.temp_byte[2];
+	datalora_npm[11] = u.temp_byte[3];
+
+	u.temp_float = last_value_BMX280_T;
+
+	datalora_npm[12] = u.temp_byte[0];
+	datalora_npm[13] = u.temp_byte[1];
+	datalora_npm[14] = u.temp_byte[2];
+	datalora_npm[15] = u.temp_byte[3];
+
+	u.temp_float = last_value_BMX280_P;
+
+	datalora_npm[16] = u.temp_byte[0];
+	datalora_npm[17] = u.temp_byte[1];
+	datalora_npm[18] = u.temp_byte[2];
+	datalora_npm[19] = u.temp_byte[3];
+
+	u.temp_float = last_value_BME280_H;
+
+	datalora_npm[20] = u.temp_byte[0];
+	datalora_npm[21] = u.temp_byte[1];
+	datalora_npm[22] = u.temp_byte[2];
+	datalora_npm[23] = u.temp_byte[3];
+
+	Debug.printf("HEX values:\n");
+	for (int i = 0; i < 20; i++)
+	{
+		Debug.printf(" %02x", datalora_npm[i]);
+		if (i == 19)
+		{
+			Debug.printf("\n");
+		}
+	}
+}
 }
 
 /*****************************************************************
@@ -3486,17 +3613,17 @@ void setup(void)
 	Debug.begin(9600); // Output to Serial at 9600 baud
 //----------------------------------------------
 
-	uint64_t chipid_num;
-	chipid_num = ESP.getEfuseMac();
-	Debug.printf("ESP32ChipID=%u\n", chipid_num); // REVOIR LE FORMAT ?
-	Debug.printf("ESP32ChipID=%04X", (uint16_t)(chipid_num >> 32));	 //print High 2 bytes
-	Debug.printf("%08X\n", (uint32_t)chipid_num);					 //print Low 4bytes.
-	esp_chipid = String((uint16_t)(chipid_num >> 32), HEX);
-	esp_chipid += String((uint32_t)chipid_num, HEX);
+	// uint64_t chipid_num;
+	// chipid_num = ESP.getEfuseMac();
+	// Debug.printf("ESP32ChipID=%04X", (uint16_t)(chipid_num >> 32));	 //print High 2 bytes
+	// Debug.printf("%08X\n", (uint32_t)chipid_num);					 //print Low 4bytes.
+	esp_chipid = String((uint16_t)(ESP.getEfuseMac() >> 32), HEX); // for esp32
+	esp_chipid += String((uint32_t)ESP.getEfuseMac(), HEX);
+	esp_chipid.toUpperCase();
 	cfg::initNonTrivials(esp_chipid.c_str());
 	WiFi.persistent(false);
 
-	debug_outln_info(F("airRohr: " SOFTWARE_VERSION_STR "/"), String(CURRENT_LANG));
+	debug_outln_info(F("Nebulo: " SOFTWARE_VERSION_STR "/"), String(CURRENT_LANG));
 	//----------------------------------------------
 
 	init_config();
@@ -3519,7 +3646,7 @@ void setup(void)
 	init_display();
 
 	debug_outln_info(F("\nChipId: "), esp_chipid);
-	debug_outln_info(F("\nMAC Id: "), esp_mac_id);
+	//debug_outln_info(F("\nMAC Id: "), esp_mac_id);
 
 	if (cfg::gps_read)
 	{
@@ -3528,15 +3655,13 @@ void setup(void)
 		disable_unneeded_nmea();
 	}
 
+// always start the Webserver on void setup to get access to the sensor
 
-if (cfg::has_wifi)
-{
 	setupNetworkTime();
 	connectWifi();
 	setup_webserver();
 	createLoggerConfigs();
 	logEnabledAPIs();
-}
 	powerOnTestSensors();
 	logEnabledDisplays();
 
@@ -3557,10 +3682,10 @@ if (cfg::has_wifi)
 	{
 
 		//Compare char array to string!
-		if (!strcmp(cfg::appeui, "0000000000000000") || !strcmp(cfg::deveui, "0000000000000000") || !strcmp(cfg::appkey, "00000000000000000000000000000000"))
-		{
-			connectWifi();
-		}
+		// if (!strcmp(cfg::appeui, "0000000000000000") || !strcmp(cfg::deveui, "0000000000000000") || !strcmp(cfg::appkey, "00000000000000000000000000000000"))
+		// {
+		// 	connectWifi();
+		// }
 
 		if (!strcmp(cfg::appeui, "0000000000000000") && !strcmp(cfg::deveui, "0000000000000000") && !strcmp(cfg::appkey, "00000000000000000000000000000000"))
 		{

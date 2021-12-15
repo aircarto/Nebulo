@@ -1,12 +1,3 @@
-/*
- *	airRohr firmware
- *	Copyright (C) 2016-2018  Code for Stuttgart a.o.
- *
- *  Translation template
- *
- *	Texts should be as short as possible
- */
-
 #define INTL_LANG "";
 #define INTL_PM_SENSOR ""
 const char INTL_CONFIGURATION[] PROGMEM = "";
@@ -20,58 +11,38 @@ const char INTL_SAVE[] PROGMEM = "";
 const char INTL_SENSORS[] PROGMEM = "";
 const char INTL_MORE_SENSORS[] PROGMEM = "";
 const char INTL_SDS011[] PROGMEM = "SDS011 ({pm})";
-const char INTL_PMS[] PROGMEM = "Plantower PMS(1,3,5,6,7)003 ({pm})";
-const char INTL_HPM[] PROGMEM = "Honeywell PM ({pm})";
 const char INTL_NPM[] PROGMEM = "Tera Sensor Next PM ({pm})";
-const char INTL_SPS30[] PROGMEM = "Sensirion SPS30 ({pm})";
-const char INTL_PPD42NS[] PROGMEM = "PPD42NS ({pm})";
-const char INTL_DHT22[] PROGMEM = "DHT22 ({t}, {h})";
-const char INTL_HTU21D[] PROGMEM = "HTU21D ({t}, {h})";
-const char INTL_BMP180[] PROGMEM = "BMP180 ({t}, {p})";
 const char INTL_BMX280[] PROGMEM = "BME280 ({t}, {h}, {p}), BMP280 ({t}, {p})";
-const char INTL_SHT3X[] PROGMEM = "SHT3X ({t}, {h})";
-const char INTL_SCD30[] PROGMEM = "SCD30 ({t}, {h}, CO₂)";
-const char INTL_DS18B20[] PROGMEM = "DS18B20 ({t})";
-const char INTL_DNMS[] PROGMEM = "DNMS ({l_a})";
-const char INTL_DNMS_CORRECTION[] PROGMEM = "";
-const char INTL_TEMP_CORRECTION[] PROGMEM = "";
 const char INTL_HEIGHT_ABOVE_SEALEVEL[] PROGMEM = "";
 const char INTL_PRESSURE_AT_SEALEVEL[] PROGMEM = "";
 const char INTL_NEO6M[] PROGMEM = "GPS (NEO 6M)";
 const char INTL_BASICAUTH[] PROGMEM = "";
 #define INTL_REPORT_ISSUE ""
-
 const char INTL_FS_WIFI_DESCRIPTION[] PROGMEM = "";
 const char INTL_FS_WIFI_NAME[] PROGMEM = "";
+const char INTL_LORA_SETTINGS[] PROGMEM = "";
 const char INTL_MORE_SETTINGS[] PROGMEM = "";
-const char INTL_AUTO_UPDATE[] PROGMEM = "";
-const char INTL_USE_BETA[] PROGMEM = "";
 const char INTL_DISPLAY[] PROGMEM = "OLED SSD1306";
 const char INTL_SH1106[] PROGMEM = "OLED SH1106";
 const char INTL_FLIP_DISPLAY[] PROGMEM = "OLED Display Flip";
-const char INTL_LCD1602_27[] PROGMEM = "LCD 1602 (I2C: 0x27)";
-const char INTL_LCD1602_3F[] PROGMEM = "LCD 1602 (I2C: 0x3F)";
-const char INTL_LCD2004_27[] PROGMEM = "LCD 2004 (I2C: 0x27)";
-const char INTL_LCD2004_3F[] PROGMEM = "LCD 2004 (I2C: 0x3F)";
 const char INTL_DISPLAY_WIFI_INFO[] PROGMEM = "";
 const char INTL_DISPLAY_DEVICE_INFO[] PROGMEM = "";
-
-#define INTL_STATIC_IP_TEXT ""
-const char INTL_STATIC_IP[] PROGMEM = "";
-const char INTL_STATIC_SUBNET[] PROGMEM = "";
-const char INTL_STATIC_GATEWAY[] PROGMEM = "";
-const char INTL_STATIC_DNS[] PROGMEM = "";
-
 const char INTL_DEBUG_LEVEL[] PROGMEM = "";
 const char INTL_MEASUREMENT_INTERVAL[] PROGMEM = "";
 const char INTL_DURATION_ROUTER_MODE[] PROGMEM = "";
 const char INTL_MORE_APIS[] PROGMEM = "";
 const char INTL_SEND_TO_OWN_API[] PROGMEM = "";
+const char INTL_SEND_TO_OWN_API2[] PROGMEM = "";
 const char INTL_SERVER[] PROGMEM = "";
 const char INTL_PATH[] PROGMEM = "";
 const char INTL_PORT[] PROGMEM = "";
 const char INTL_USER[] PROGMEM = "";
 const char INTL_PASSWORD[] PROGMEM = "";
+const char INTL_SERVER2[] PROGMEM = "";
+const char INTL_PATH2[] PROGMEM = "";
+const char INTL_PORT2[] PROGMEM = "";
+const char INTL_USER2[] PROGMEM = "";
+const char INTL_PASSWORD2[] PROGMEM = "";
 const char INTL_MEASUREMENT[] PROGMEM = "";
 const char INTL_SEND_TO[] PROGMEM = "";
 const char INTL_READ_FROM[] PROGMEM = "";
@@ -110,10 +81,6 @@ const char INTL_TEMPERATURE[] PROGMEM = "";
 const char INTL_HUMIDITY[] PROGMEM = "";
 const char INTL_PRESSURE[] PROGMEM = "";
 const char INTL_DEW_POINT[] PROGMEM = "";
-const char INTL_CO2_PPM[] PROGMEM = "ppm CO₂";
-const char INTL_LEQ_A[] PROGMEM = "LAeq";
-const char INTL_LA_MIN[] PROGMEM = "LA min";
-const char INTL_LA_MAX[] PROGMEM = "LA max";
 const char INTL_LATITUDE[] PROGMEM = "";
 const char INTL_LONGITUDE[] PROGMEM = "";
 const char INTL_ALTITUDE[] PROGMEM = "";
@@ -125,5 +92,8 @@ const char INTL_SIGNAL_QUALITY[] PROGMEM = "";
 #define INTL_SENSOR ""
 #define INTL_PARAMETER ""
 #define INTL_VALUE ""
+const char INTL_LORA_EXPLANATION[] = "";
+const char INTL_LORA_ACTIVATION[] = "";
+const char INTL_WIFI_ACTIVATION[] = "";
 
-#include "./airrohr-logo-common.h"
+#include "./nebulo-logo-common.h"

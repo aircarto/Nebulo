@@ -5,6 +5,8 @@
 
 #define LEN_CFG_STRING 65
 #define LEN_CFG_PASSWORD 65
+#define LEN_CFG_STRING2 65
+#define LEN_CFG_PASSWORD2 65
 
 #define LEN_APPEUI 17
 #define LEN_DEVEUI 17
@@ -22,6 +24,10 @@
 #define LEN_URL_CUSTOM 100
 #define LEN_USER_CUSTOM 65
 #define MAX_PORT_DIGITS 5
+#define LEN_HOST_CUSTOM2 100
+#define LEN_URL_CUSTOM2 100
+#define LEN_USER_CUSTOM2 65
+#define MAX_PORT_DIGITS2 5
 
 // define debug levels
 #define DEBUG_ERROR 1

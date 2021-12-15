@@ -3,7 +3,7 @@
 
 // Wifi config
 const char WLANSSID[] PROGMEM = "luftdaten";
-const char WLANPWD[] PROGMEM = "";
+const char WLANPWD[] PROGMEM = "luftd4ten";
 
 // BasicAuth config
 const char WWW_USERNAME[] PROGMEM = "admin";
@@ -11,15 +11,14 @@ const char WWW_PASSWORD[] PROGMEM = "";
 #define WWW_BASICAUTH_ENABLED 0
 
 // Sensor Wifi config (config mode)
-#define FS_SSID "admin"
+#define FS_SSID ""
 #define FS_PWD "nebulocfg"
 
-#define HAS_WIFI 0
-#define HAS_LORA 1
-#define APPEUI "0000000000000000"
-#define DEVEUI "0000000000000000"
-#define APPKEY "00000000000000000000000000000000"
-#define SEND2LORA 1
+#define HAS_WIFI 1
+#define HAS_LORA 0
+const char APPEUI[] = "0000000000000000";
+const char DEVEUI [] = "0000000000000000";
+const char APPKEY[] = "00000000000000000000000000000000";
 
 // Where to send the data?
 #define SEND2SENSORCOMMUNITY 0
@@ -28,12 +27,13 @@ const char WWW_PASSWORD[] PROGMEM = "";
 #define SSL_MADAVI 0
 #define SEND2CSV 0
 #define SEND2CUSTOM 0
-
+#define SEND2CUSTOM2 0
 
 enum LoggerEntry {
     LoggerSensorCommunity,
     LoggerMadavi,
     LoggerCustom,
+    LoggerCustom2,
     LoggerCount
 };
 
@@ -63,6 +63,13 @@ static const char URL_CUSTOM[] PROGMEM = "/data.php";
 #define PWD_CUSTOM ""
 #define SSL_CUSTOM 0
 
+// define own API
+static const char HOST_CUSTOM2[] PROGMEM = "192.168.234.1";
+static const char URL_CUSTOM2[] PROGMEM = "/data.php";
+#define PORT_CUSTOM2 80
+#define USER_CUSTOM2 ""
+#define PWD_CUSTOM2 ""
+#define SSL_CUSTOM2 0
 
 //  === pin assignments for dev kit board ===================================
 #ifdef ESP32
@@ -93,11 +100,11 @@ static const char URL_CUSTOM[] PROGMEM = "/data.php";
 #endif
 
 // SDS011, the more expensive version of the particle sensor
-#define SDS_READ 1
+#define SDS_READ 0
 #define SDS_API_PIN 1
 
 // Tera Sensor Next PM sensor
-#define NPM_READ 0
+#define NPM_READ 1
 #define NPM_API_PIN 1
 
 // BMP280/BME280, temperature, pressure (humidity on BME280)

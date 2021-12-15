@@ -1,7 +1,7 @@
 
 
 // This file is generated, please do not edit.
-// Change airrohr-cfg.h.py instead.
+// Change nebulo-cfg.h.py instead.
 
 enum ConfigEntryType : unsigned short {
 	Config_Type_Bool,
@@ -31,7 +31,6 @@ enum ConfigShapeId {
 	Config_appeui,
 	Config_deveui,
 	Config_appkey,
-	Config_send2lora,
 	Config_current_lang,
 	Config_wlanssid,
 	Config_wlanpwd,
@@ -55,10 +54,6 @@ enum ConfigShapeId {
 	Config_has_flipped_display,
 	Config_display_wifi_info,
 	Config_display_device_info,
-	Config_static_ip,
-	Config_static_subnet,
-	Config_static_gateway,
-	Config_static_dns,
 	Config_debug,
 	Config_sending_intervall_ms,
 	Config_time_for_wifi_config,
@@ -69,13 +64,19 @@ enum ConfigShapeId {
 	Config_user_custom,
 	Config_pwd_custom,
 	Config_ssl_custom,
+	Config_send2custom2,
+	Config_host_custom2,
+	Config_url_custom2,
+	Config_port_custom2,
+	Config_user_custom2,
+	Config_pwd_custom2,
+	Config_ssl_custom2,
 };
 static constexpr char CFG_KEY_HAS_WIFI[] PROGMEM = "has_wifi";
 static constexpr char CFG_KEY_HAS_LORA[] PROGMEM = "has_lora";
 static constexpr char CFG_KEY_APPEUI[] PROGMEM = "appeui";
 static constexpr char CFG_KEY_DEVEUI[] PROGMEM = "deveui";
 static constexpr char CFG_KEY_APPKEY[] PROGMEM = "appkey";
-static constexpr char CFG_KEY_SEND2LORA[] PROGMEM = "send2lora";
 static constexpr char CFG_KEY_CURRENT_LANG[] PROGMEM = "current_lang";
 static constexpr char CFG_KEY_WLANSSID[] PROGMEM = "wlanssid";
 static constexpr char CFG_KEY_WLANPWD[] PROGMEM = "wlanpwd";
@@ -99,10 +100,6 @@ static constexpr char CFG_KEY_HAS_SSD1306[] PROGMEM = "has_ssd1306";
 static constexpr char CFG_KEY_HAS_FLIPPED_DISPLAY[] PROGMEM = "has_flipped_display";
 static constexpr char CFG_KEY_DISPLAY_WIFI_INFO[] PROGMEM = "display_wifi_info";
 static constexpr char CFG_KEY_DISPLAY_DEVICE_INFO[] PROGMEM = "display_device_info";
-static constexpr char CFG_KEY_STATIC_IP[] PROGMEM = "static_ip";
-static constexpr char CFG_KEY_STATIC_SUBNET[] PROGMEM = "static_subnet";
-static constexpr char CFG_KEY_STATIC_GATEWAY[] PROGMEM = "static_gateway";
-static constexpr char CFG_KEY_STATIC_DNS[] PROGMEM = "static_dns";
 static constexpr char CFG_KEY_DEBUG[] PROGMEM = "debug";
 static constexpr char CFG_KEY_SENDING_INTERVALL_MS[] PROGMEM = "sending_intervall_ms";
 static constexpr char CFG_KEY_TIME_FOR_WIFI_CONFIG[] PROGMEM = "time_for_wifi_config";
@@ -113,13 +110,19 @@ static constexpr char CFG_KEY_PORT_CUSTOM[] PROGMEM = "port_custom";
 static constexpr char CFG_KEY_USER_CUSTOM[] PROGMEM = "user_custom";
 static constexpr char CFG_KEY_PWD_CUSTOM[] PROGMEM = "pwd_custom";
 static constexpr char CFG_KEY_SSL_CUSTOM[] PROGMEM = "ssl_custom";
+static constexpr char CFG_KEY_SEND2CUSTOM2[] PROGMEM = "send2custom2";
+static constexpr char CFG_KEY_HOST_CUSTOM2[] PROGMEM = "host_custom2";
+static constexpr char CFG_KEY_URL_CUSTOM2[] PROGMEM = "url_custom2";
+static constexpr char CFG_KEY_PORT_CUSTOM2[] PROGMEM = "port_custom2";
+static constexpr char CFG_KEY_USER_CUSTOM2[] PROGMEM = "user_custom2";
+static constexpr char CFG_KEY_PWD_CUSTOM2[] PROGMEM = "pwd_custom2";
+static constexpr char CFG_KEY_SSL_CUSTOM2[] PROGMEM = "ssl_custom2";
 static constexpr ConfigShapeEntry configShape[] PROGMEM = {
 	{ Config_Type_Bool, 0, CFG_KEY_HAS_WIFI, &cfg::has_wifi },
 	{ Config_Type_Bool, 0, CFG_KEY_HAS_LORA, &cfg::has_lora },
-	{ Config_Type_Hex, 0, CFG_KEY_APPEUI, cfg::appeui },
-	{ Config_Type_Hex, 0, CFG_KEY_DEVEUI, cfg::deveui },
-	{ Config_Type_Hex, 0, CFG_KEY_APPKEY, cfg::appkey },
-	{ Config_Type_Bool, 0, CFG_KEY_SEND2LORA, &cfg::send2lora },
+	{ Config_Type_Hex, sizeof(cfg::appeui)-1, CFG_KEY_APPEUI, cfg::appeui },
+	{ Config_Type_Hex, sizeof(cfg::deveui)-1, CFG_KEY_DEVEUI, cfg::deveui },
+	{ Config_Type_Hex, sizeof(cfg::appkey)-1, CFG_KEY_APPKEY, cfg::appkey },
 	{ Config_Type_String, sizeof(cfg::current_lang)-1, CFG_KEY_CURRENT_LANG, cfg::current_lang },
 	{ Config_Type_String, sizeof(cfg::wlanssid)-1, CFG_KEY_WLANSSID, cfg::wlanssid },
 	{ Config_Type_Password, sizeof(cfg::wlanpwd)-1, CFG_KEY_WLANPWD, cfg::wlanpwd },
@@ -143,10 +146,6 @@ static constexpr ConfigShapeEntry configShape[] PROGMEM = {
 	{ Config_Type_Bool, 0, CFG_KEY_HAS_FLIPPED_DISPLAY, &cfg::has_flipped_display },
 	{ Config_Type_Bool, 0, CFG_KEY_DISPLAY_WIFI_INFO, &cfg::display_wifi_info },
 	{ Config_Type_Bool, 0, CFG_KEY_DISPLAY_DEVICE_INFO, &cfg::display_device_info },
-	{ Config_Type_String, sizeof(cfg::static_ip)-1, CFG_KEY_STATIC_IP, cfg::static_ip },
-	{ Config_Type_String, sizeof(cfg::static_subnet)-1, CFG_KEY_STATIC_SUBNET, cfg::static_subnet },
-	{ Config_Type_String, sizeof(cfg::static_gateway)-1, CFG_KEY_STATIC_GATEWAY, cfg::static_gateway },
-	{ Config_Type_String, sizeof(cfg::static_dns)-1, CFG_KEY_STATIC_DNS, cfg::static_dns },
 	{ Config_Type_UInt, 0, CFG_KEY_DEBUG, &cfg::debug },
 	{ Config_Type_Time, 0, CFG_KEY_SENDING_INTERVALL_MS, &cfg::sending_intervall_ms },
 	{ Config_Type_Time, 0, CFG_KEY_TIME_FOR_WIFI_CONFIG, &cfg::time_for_wifi_config },
@@ -157,4 +156,11 @@ static constexpr ConfigShapeEntry configShape[] PROGMEM = {
 	{ Config_Type_String, sizeof(cfg::user_custom)-1, CFG_KEY_USER_CUSTOM, cfg::user_custom },
 	{ Config_Type_Password, sizeof(cfg::pwd_custom)-1, CFG_KEY_PWD_CUSTOM, cfg::pwd_custom },
 	{ Config_Type_Bool, 0, CFG_KEY_SSL_CUSTOM, &cfg::ssl_custom },
+	{ Config_Type_Bool, 0, CFG_KEY_SEND2CUSTOM2, &cfg::send2custom2 },
+	{ Config_Type_String, sizeof(cfg::host_custom2)-1, CFG_KEY_HOST_CUSTOM2, cfg::host_custom2 },
+	{ Config_Type_String, sizeof(cfg::url_custom2)-1, CFG_KEY_URL_CUSTOM2, cfg::url_custom2 },
+	{ Config_Type_UInt, 0, CFG_KEY_PORT_CUSTOM2, &cfg::port_custom2 },
+	{ Config_Type_String, sizeof(cfg::user_custom2)-1, CFG_KEY_USER_CUSTOM2, cfg::user_custom2 },
+	{ Config_Type_Password, sizeof(cfg::pwd_custom2)-1, CFG_KEY_PWD_CUSTOM2, cfg::pwd_custom2 },
+	{ Config_Type_Bool, 0, CFG_KEY_SSL_CUSTOM2, &cfg::ssl_custom2 },
 };

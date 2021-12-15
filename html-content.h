@@ -3,7 +3,9 @@ const char TXT_CONTENT_TYPE_INFLUXDB[] PROGMEM = "application/x-www-form-urlenco
 const char TXT_CONTENT_TYPE_TEXT_HTML[] PROGMEM = "text/html; charset=utf-8";
 const char TXT_CONTENT_TYPE_TEXT_CSS[] PROGMEM = "text/css";
 const char TXT_CONTENT_TYPE_TEXT_PLAIN[] PROGMEM = "text/plain";
+// ICI
 const char TXT_CONTENT_TYPE_IMAGE_PNG[] PROGMEM = "image/png";
+const char TXT_CONTENT_TYPE_IMAGE_SVG[] PROGMEM = "image/svg";
 
 const char DBG_TXT_TEMPERATURE[] PROGMEM = "Temperature (°C): ";
 const char DBG_TXT_HUMIDITY[] PROGMEM = "Humidity (%): ";
@@ -53,25 +55,25 @@ body{font-family:Arial,sans-serif;margin:0}\
 .r{text-align:right}\
 td{vertical-align:top}\
 .v>tbody>tr:nth-child(odd){background:#efefef}\
-.b{text-decoration:none;padding:10px;background:#2a9;color:#fff;display:block;width:auto;border-radius:5px;}\
+.b{text-decoration:none;padding:10px;background:#438DBF;color:#fff;display:block;width:auto;border-radius:5px;}\
 .wifi{background:0 0;color:#00f;padding:5px;display:inline;border:0;}\
 input[type=text]{width:100%}\
 input[type=password]{width:100%}\
 input[type=submit]{color:#fff;text-align:left;cursor:pointer;border-radius:5px;font-size:medium;background:#b33;padding:9px!important;width:100%;border-style:none}\
 input[type=submit]:hover{background:#d44}\
-.s_green{padding:9px !important;width:100%;border-style:none;background:#3ba;color:#fff;text-align:left}\
+.s_green{padding:9px !important;width:100%;border-style:none;background:#438DBF;color:#fff;text-align:left}\
 .tabs{display:flex;flex-direction:row;align-items:stretch;align-content:flex-end;justify-content:flex-start}\
 .tab{padding:10px 20px;display:inline-block;color:#333}\
-.panels{min-height:200px;overflow:hidden;padding:20px;border:2px solid #3ba;margin-bottom:1em;}\
+.panels{min-height:200px;overflow:hidden;padding:20px;border:2px solid #438DBF;margin-bottom:1em;}\
 .radio{display:none}.panel{display:none}\
-.canvas{min-height:118px;background:#3ba;margin-bottom:20px;}\
-#r4:checked~.panels>#panel4,#r1:checked~.panels>#panel1,#r3:checked~.panels>#panel3,#r2:checked~.panels>#panel2{display:block}\
-#r4:checked~.tabs>#tab4,#r1:checked~.tabs>#tab1,#r3:checked~.tabs>#tab3,#r2:checked~.tabs>#tab2{background:#3ba;color:#fff}";
+.canvas{min-height:118px;background:#438DBF;margin-bottom:20px;}\
+#r5:checked~.panels>#panel5,#r4:checked~.panels>#panel4,#r1:checked~.panels>#panel1,#r3:checked~.panels>#panel3,#r2:checked~.panels>#panel2{display:block}\
+#r5:checked~.tabs>#tab5,#r4:checked~.tabs>#tab4,#r1:checked~.tabs>#tab1,#r3:checked~.tabs>#tab3,#r2:checked~.tabs>#tab2{background:#438DBF;color:#fff}";
 
 #define STATIC_PREFIX "/" INTL_LANG "_s1"
 
 const char WEB_PAGE_HEADER_HEAD[] PROGMEM = "<meta name='viewport' content='width=device-width'/>\
-<meta name='theme-color' content='#3ba'>\
+<meta name='theme-color' content='#438DBF'>\
 <link rel='stylesheet' href='" STATIC_PREFIX "?r=css'>\
 </style>\
 </head><body>\
@@ -80,7 +82,7 @@ const char WEB_PAGE_HEADER_HEAD[] PROGMEM = "<meta name='viewport' content='widt
 <img src='" STATIC_PREFIX "?r=logo' alt='" INTL_BACK_TO_HOME "' style='float:left;margin:16px' width='100' height='89'/></a>";
 
 const char WEB_PAGE_HEADER_BODY[] PROGMEM = "<h3 style='margin:0 10px; color:#fff;'>" INTL_PM_SENSOR "</h3>\
-<br/><small style='color:#fff;font-weight:700'>ID: {id} ({macid})<br/>" INTL_FIRMWARE ": " SOFTWARE_VERSION_STR "/" INTL_LANG "&nbsp;(" __DATE__ ")<br/>\
+<br/><small style='color:#fff;font-weight:700'>ID: {id}<br/>" INTL_FIRMWARE ": " SOFTWARE_VERSION_STR "/" INTL_LANG "&nbsp;(" __DATE__ ")<br/>\
 </small></div><div class='content'><h4>" INTL_HOME " {n} {t}</h4>";
 
 const char BR_TAG[] PROGMEM = "<br/>";
@@ -92,14 +94,14 @@ const char EMPTY_ROW[] PROGMEM = "<tr><td colspan='3'>&nbsp;</td></tr>";
 const char WEB_PAGE_FOOTER[] PROGMEM = "<br/><br/>"
                 "<a class='b' href='/' style='display:inline;'>" INTL_BACK_TO_HOME "</a><br/><br/><br/>"
 		"</div><footer class='footer'><div style='padding:16px'>"
-		"<a href='https://codefor.de/stuttgart/' target='_blank' rel='noreferrer' style='color:#3ba;'>"
-		"&copy; Open Knowledge Lab Stuttgart a.o. (Code for Germany)</a>&nbsp;&nbsp("
-                "<a href='https://github.com/opendata-stuttgart/sensors-software/labels/bug' target='_blank' rel='noreferrer'>" INTL_REPORT_ISSUE "</a>"
+		"<a href='https://www.aircarto.fr/ target='_blank' rel='noreferrer' style='color:#438DBF;'>"
+		"&copy; AirCarto</a>&nbsp;&nbsp("
+                "<a href='https://github.com/aircarto/Nebulo/labels/bug' target='_blank' rel='noreferrer'>" INTL_REPORT_ISSUE "</a>"
 		")</div></footer></body></html>\r\n";
 
 const char WEB_ROOT_PAGE_CONTENT[] PROGMEM = "<a class='b' href='/values'>{t}</a><br/>\
 <a class='b' href='/status'>{s}</a><br/>\
-<a class='b' href='https://maps.sensor.community/' target='_blank' rel='noreferrer'>" INTL_ACTIVE_SENSORS_MAP "</a><br/>\
+<a class='b' href='https://www.aircarto.fr/map' target='_blank' rel='noreferrer'>" INTL_ACTIVE_SENSORS_MAP "</a><br/>\
 <a class='b' href='/config'>{conf}</a><br/>\
 <a class='b' href='/removeConfig'>" INTL_CONFIGURATION_DELETE "</a><br/>\
 <a class='b' href='/reset'>{restart}</a><br/>\
@@ -134,9 +136,6 @@ const char WEB_BR_FORM[] PROGMEM = "<br/></form>";
 const char WEB_BR_LF_B[] PROGMEM = "<br/>\n<b>";
 const char WEB_LF_B[] PROGMEM = "\n<b>";
 const char WEB_CSV[] PROGMEM = "CSV";
-const char WEB_FEINSTAUB_APP[] PROGMEM = "<a target='_blank' href='https://chillibits.com/pmapp'>Feinstaub-App</a>";
-const char WEB_OPENSENSEMAP[] PROGMEM = "<a target='_blank' href='https://opensensemap.org/about'>OpenSenseMap.org</a>";
-const char WEB_AIRCMS[] PROGMEM = "<a target='_blank' href='https://aircms.online/#/mission'>aircms.online</a>";
 const char WEB_MADAVI[] PROGMEM = "<a target='_blank' href='https://www.madavi.de/ok-lab-stuttgart/'>Madavi.de</a>";
 const char WEB_SENSORCOMMUNITY[] PROGMEM = "<a target='_blank' href='https://archive.sensor.community/00disclamer.md'>Sensor.Community</a>";
 const char WEB_HTTPS[] PROGMEM = "HTTPS";

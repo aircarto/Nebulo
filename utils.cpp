@@ -1,25 +1,3 @@
-/************************************************************************
- *                                                                      *
- *    airRohr firmware                                                  *
- *    Copyright (C) 2016-2020  Code for Stuttgart a.o.                  *
- *    Copyright (C) 2019-2020  Dirk Mueller                             *
- *                                                                      *
- * This program is free software: you can redistribute it and/or modify *
- * it under the terms of the GNU General Public License as published by *
- * the Free Software Foundation, either version 3 of the License, or    *
- * (at your option) any later version.                                  *
- *                                                                      *
- * This program is distributed in the hope that it will be useful,      *
- * but WITHOUT ANY WARRANTY; without even the implied warranty of       *
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the        *
- * GNU General Public License for more details.                         *
- *                                                                      *
- * You should have received a copy of the GNU General Public License    *
- * along with this program. If not, see <http://www.gnu.org/licenses/>. *
- *                                                                      *
- ************************************************************************
- */
-
 #include <WString.h>
 
 #include "./intl.h"
@@ -27,7 +5,7 @@
 #include "./defines.h"
 #include "./ext_def.h"
 
-#include "ca-root.h"
+//#include "ca-root.h"
 
 
 /*****************************************************************
@@ -104,7 +82,6 @@ String add_sensor_type(const String& sensor_text) {
 	s.replace("{t}", FPSTR(INTL_TEMPERATURE));
 	s.replace("{h}", FPSTR(INTL_HUMIDITY));
 	s.replace("{p}", FPSTR(INTL_PRESSURE));
-	s.replace("{l_a}", FPSTR(INTL_LEQ_A));
 	return s;
 }
 
@@ -157,58 +134,6 @@ String delayToString(unsigned time_ms) {
 
 	return s;
 }
-
-#if defined(ESP8266)
-BearSSL::X509List x509_dst_root_ca(dst_root_ca_x3);
-
-void configureCACertTrustAnchor(WiFiClientSecure* client) {
-	constexpr time_t fw_built_year = (__DATE__[ 7] - '0') * 1000 + \
-							  (__DATE__[ 8] - '0') *  100 + \
-							  (__DATE__[ 9] - '0') *   10 + \
-							  (__DATE__[10] - '0');
-	if (time(nullptr) < (fw_built_year - 1970) * 365 * 24 * 3600) {
-		debug_outln_info(F("Time incorrect; Disabling CA verification."));
-		client->setInsecure();
-	}
-	else {
-		client->setTrustAnchors(&x509_dst_root_ca);
-	}
-}
-
-bool launchUpdateLoader(const String& md5) {
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored  "-Wdeprecated-declarations"
-
-	File loaderFile = SPIFFS.open(F("/loader.bin"), "r");
-	if (!loaderFile) {
-		return false;
-	}
-
-	if (!Update.begin(loaderFile.size(), U_FLASH)) {
-		return false;
-	}
-
-	if (md5.length() && !Update.setMD5(md5.c_str())) {
-		return false;
-	}
-
-	if (Update.writeStream(loaderFile) != loaderFile.size()) {
-		return false;
-	}
-	loaderFile.close();
-
-	if (!Update.end()) {
-		return false;
-	}
-
-	debug_outln_info(F("Erasing SDK config."));
-	ESP.eraseConfig();
-	return true;
-#pragma GCC diagnostic pop
-}
-
-#endif
 
 
 /*****************************************************************
@@ -598,7 +523,10 @@ const __FlashStringHelper* loggerDescription(unsigned i) {
             logger = F("Madavi.de");
             break;
         case LoggerCustom:
-            logger = F("Custom");
+            logger = F("AirCarto");
+            break;
+        case LoggerCustom2:
+            logger = F("AtmoSud");
             break;
     }
     return logger;
