@@ -25,8 +25,11 @@ String SOFTWARE_VERSION(SOFTWARE_VERSION_STR);
 #include <ESPmDNS.h>
 
 // includes external libraries
+
 #include "./oledfont.h" // avoids including the default Arial font, needs to be included before SSD1306.h
-#include <SSD1306.h>
+#include <SSD1306Wire.h>
+//#include <SSD1306.h>
+
 #define ARDUINOJSON_ENABLE_ARDUINO_STREAM 0
 #define ARDUINOJSON_ENABLE_ARDUINO_PRINT 0
 #define ARDUINOJSON_DECODE_UNICODE 0
@@ -158,7 +161,8 @@ WebServer server(80);
 /*****************************************************************
  * Display definitions                                           *
  *****************************************************************/
-SSD1306 *oled_ssd1306 = nullptr;
+
+SSD1306Wire *oled_ssd1306 = nullptr;
 
 /*****************************************************************
  * Serial declarations                                           *
@@ -314,6 +318,7 @@ static String displayGenerateFooter(unsigned int screen_count)
 static void display_debug(const String &text1, const String &text2)
 {
 	debug_outln_info(F("output debug text to displays..."));
+
 	if (oled_ssd1306)
 	{
 		oled_ssd1306->clear();
@@ -323,6 +328,7 @@ static void display_debug(const String &text1, const String &text2)
 		oled_ssd1306->drawString(0, 24, text2);
 		oled_ssd1306->display();
 	}
+
 }
 
 /*****************************************************************
@@ -2945,31 +2951,34 @@ static void display_values()
  *****************************************************************/
 static void init_display()
 {
-	if (cfg::has_display)
+	if (cfg::has_display && cfg::has_ssd1306)
 	{
-		oled_ssd1306 = new SSD1306(0x3c, I2C_PIN_SDA, I2C_PIN_SCL);
+
+#if defined(ARDUINO_TTGO_LoRa32_v21new)
+		oled_ssd1306 = new SSD1306Wire(0x3c, I2C_PIN_SDA, I2C_PIN_SCL);
+#endif
+
+#if defined(ARDUINO_HELTEC_WIFI_LORA_32_V2)
+		oled_ssd1306 = new SSD1306Wire(0x3c, I2C_SCREEN_SDA, I2C_SCREEN_SCL);
+#endif
+		
 		oled_ssd1306->init();
-		if (cfg::has_flipped_display)
-		{
-			oled_ssd1306->flipScreenVertically();
-		}
-	}
-	if (cfg::has_ssd1306)
-	{
-		oled_ssd1306 = new SSD1306(0x3c, I2C_PIN_SDA, I2C_PIN_SCL);
-		oled_ssd1306->init();
-		if (cfg::has_flipped_display)
-		{
-			oled_ssd1306->flipScreenVertically();
-		}
-	}
+
+		oled_ssd1306->flipScreenVertically();
+
+		oled_ssd1306->clear();
+		oled_ssd1306->displayOn();
+		oled_ssd1306->setTextAlignment(TEXT_ALIGN_CENTER);
+		oled_ssd1306->drawString(64, 1, "START");
+		oled_ssd1306->display();
+
 	// reset back to 100k as the OLEDDisplay initialization is
 	// modifying the I2C speed to 400k, which overwhelms some of the
 	// sensors.
 	Wire.setClock(100000);
 	//Wire.setClockStretchLimit(150000);
 }
-
+}
 /*****************************************************************
  * Init BMP280/BME280                                            *
  *****************************************************************/
@@ -3239,60 +3248,7 @@ static unsigned long sendDataToOptionalApis(const String &data)
  * Helium LoRaWAN                  *
  *****************************************************************/
 
-// static byte[] ToByteArray(String HexString)
-// {
-// 	int NumberChars = HexString.Length;
-// 	byte[] bytes = new byte[NumberChars / 2];
-// 	for (int i = 0; i < NumberChars; i += 2)
-// 	{
-// 		bytes[i / 2] = Convert.ToByte(HexString.Substring(i, 2), 16);
-// 	}
-// 	return bytes;
-// }
-
-static int GetHexVal(char hex)
-{
-	int val = (int)hex;
-	//For uppercase A-F letters:
-	return val - (val < 58 ? 48 : 55);
-	//For lowercase a-f letters:
-	//return val - (val < 58 ? 48 : 87);
-	//Or the two combined, but a bit slower:
-	// return val - (val < 58 ? 48 : (val < 97 ? 55 : 87));
-}
-
-static u1_t *ToByteArray(String hex)
-{
-	byte *arr = new byte[hex.length() >> 1];
-
-	for (int i = 0; i < hex.length() >> 1; ++i)
-	{
-		arr[i] = (byte)((GetHexVal(hex[i << 1]) << 4) + (GetHexVal(hex[(i << 1) + 1])));
-	}
-	return arr;
-}
-
-
-
-// byte *ToByteArray(String HexString)
-// {
-// 	int NumberChars = HexString.length();
-// 	byte *bytes_array = new byte[NumberChars / 2];
-// 	for (int i = 0; i < NumberChars; i += 2)
-// 	{
-// 		ostringstream ret;
-// 		// bytes_array[i / 2] = Convert.ToByte(HexString.substring(i, 2), 16);
-// 		bytes_array[i / 2] << std::hex << HexString.substring(i, 2);
-// 	}
-
-// 	// byte *payload = new byte[9]; // Allocate memory on the heap
-// 	// return payload;
-// }
-
-
-
-
-// /* OTAA para*/
+// /* OTAA para*/ EXEMPLE
 // uint8_t DevEui[] = {0x60, 0x81, 0xF9, 0x7B, 0x1A, 0x5B, 0x67, 0x63};
 // uint8_t AppEui[] = {0x60, 0x81, 0xF9, 0x22, 0x43, 0x9D, 0x24, 0xD9};
 // uint8_t AppKey[] = {0xCA, 0x22, 0x28, 0xAE, 0x0C, 0xC8, 0x6C, 0x6E, 0x31, 0x77, 0xA9, 0x8D, 0xCD, 0xF0, 0xDC, 0xBB};
@@ -3305,17 +3261,19 @@ static u1_t *ToByteArray(String hex)
 
 //6081F97B1A5B6763 A RETOURNER ET CONVERTIR EN HEX
 
-static const u1_t PROGMEM appeui_hex[8] = {};
-void os_getArtEui(u1_t *buf){memcpy_P(buf, appeui_hex, 8);}
-
-static const u1_t PROGMEM deveui_hex[8] = {};
-void os_getDevEui(u1_t *buf) { memcpy_P(buf, deveui_hex, 8); }
-
 // This key should be in big endian format (or, since it is not really a
 // number but a block of memory, endianness does not really apply).
 
+static u1_t PROGMEM appeui_hex[8] = {};
+static u1_t PROGMEM deveui_hex[8] = {};
+
 // DANS LE MEME ORDRE
-static const u1_t PROGMEM appkey_hex[16] = {};
+static u1_t PROGMEM appkey_hex[16] = {};
+
+void os_getArtEui(u1_t *buf) { memcpy_P(buf, appeui_hex, 8); }
+
+void os_getDevEui(u1_t *buf) { memcpy_P(buf, deveui_hex, 8); }
+
 void os_getDevKey(u1_t *buf) { memcpy_P(buf, appkey_hex, 16); }
 
 //DEFINIR LA SIZE AJOUTER PM1!!!!!!!!!!!!!!!
@@ -3326,6 +3284,38 @@ static osjob_t sendjob;
 // Schedule TX every this many seconds (might become longer due to duty
 // cycle limitations).
 //const unsigned TX_INTERVAL = 60; // Replaced with cfg::time_send
+
+void ToByteArray()
+{
+
+	unsigned long number1 = strtoul(cfg::appeui, nullptr, 16);
+	unsigned long number2 = strtoul(cfg::deveui, nullptr, 16);
+	unsigned long number3 = strtoul(cfg::appkey, nullptr, 16);
+
+	for (int i = 7; i >= 0; i--) // start with lowest byte of number  //INVERSÈ????
+	{
+		appeui_hex[i] = number1 & 0xFF; // or: = byte( number);
+		number1 >>= 8;					// get next byte into position
+	}
+
+	for (int i = 7; i >= 0; i--) // start with lowest byte of number  //INVERSÈ????
+	{
+		deveui_hex[i] = number1 & 0xFF; // or: = byte( number);
+		number2 >>= 8;					// get next byte into position
+	}
+
+	for (int i = 15; i >= 0; i--) // start with lowest byte of number  //INVERSÈ????
+	{
+		appkey_hex[i] = number1 & 0xFF; // or: = byte( number);
+		number3 >>= 8;					// get next byte into position
+	}
+
+	// for (int i = 0; i < 4; i++)
+	// {
+	// 	Serial.print("0x");
+	// 	Serial.println(CardNumberByte[i], HEX);
+	// }
+}
 
 void printHex2(unsigned v)
 {
@@ -3610,6 +3600,8 @@ if (cfg::npm_read)
 
 void setup(void)
 {
+
+
 	Debug.begin(9600); // Output to Serial at 9600 baud
 //----------------------------------------------
 
@@ -3628,6 +3620,36 @@ void setup(void)
 
 	init_config();
 
+#if defined(ARDUINO_TTGO_LoRa32_v21new)
+	Wire.begin(I2C_PIN_SDA, I2C_PIN_SCL);
+#endif
+
+// #if defined(ARDUINO_HELTEC_WIFI_LORA_32_V2)
+	//Heltec.begin(true /*DisplayEnable Enable*/, true /*LoRa Disable*/, true /*Serial Enable*/, true /*PABOOST Enable*/, 470E6 /**/);
+	// if (cfg::has_lora)
+	// {
+	// 	Heltec.begin(true, true, false); // Serial normal
+	// }
+	// else
+	// {
+	// 	Heltec.begin(true, false, false); // Serial normal
+	// }
+
+	// delay(2000);
+	// oled_ssd1306->clear();
+	// oled_ssd1306->drawString(0, 0, "NEBULO STARTS");
+	// oled_ssd1306->display();
+	// delay(2000);
+
+#if defined(ARDUINO_HELTEC_WIFI_LORA_32_V2)
+	pinMode(OLED_RESET, OUTPUT);
+	digitalWrite(OLED_RESET, LOW); // set GPIO16 low to reset OLED
+	delay(50);
+	digitalWrite(OLED_RESET, HIGH); // while OLED is running, must set GPIO16 in high、
+	Wire.begin(I2C_SCREEN_SDA, I2C_SCREEN_SCL);
+	Wire1.begin(I2C_PIN_SDA, I2C_PIN_SCL);
+#endif
+
 	if (cfg::npm_read)
 	{
 		serialNPM.begin(115200, SERIAL_8E1, PM_SERIAL_RX, PM_SERIAL_TX); //ENLEVE NPM_SERIAL_TX...
@@ -3641,9 +3663,17 @@ void setup(void)
 		serialSDS.setTimeout((4 * 12 * 1000) / 9600);
 	}
 
-	Wire.begin(I2C_PIN_SDA, I2C_PIN_SCL);
-
 	init_display();
+
+
+	// #if defined(ARDUINO_HELTEC_WIFI_LORA_32_V2)
+	// 	delay(2000);
+	// 	oled_ssd1306->setTextAlignment(TEXT_ALIGN_CENTER);
+	// 	oled_ssd1306->clear();
+	// 	oled_ssd1306->drawString(58, 22, "NEBULO STARTS");
+	// 	oled_ssd1306->display();
+	// 	delay(2000);
+	// #endif
 
 	debug_outln_info(F("\nChipId: "), esp_chipid);
 	//debug_outln_info(F("\nMAC Id: "), esp_mac_id);
@@ -3686,6 +3716,39 @@ void setup(void)
 		// {
 		// 	connectWifi();
 		// }
+
+		ToByteArray();
+
+		Debug.printf("APPEUI:\n");
+		for (int i = 0; i < 8; i++)
+		{
+			Debug.printf(" %02x", appeui_hex[i]);
+			if (i == 7)
+			{
+				Debug.printf("\n");
+			}
+		}
+
+		Debug.printf("DEVEUI:\n");
+		for (int i = 0; i < 8; i++)
+		{
+			Debug.printf(" %02x", deveui_hex[i]);
+			if (i == 7)
+			{
+				Debug.printf("\n");
+			}
+		}
+
+		Debug.printf("APPKEY:\n");
+		for (int i = 0; i < 16; i++)
+		{
+			Debug.printf(" %02x", appkey_hex[i]);
+			if (i == 15)
+			{
+				Debug.printf("\n");
+			}
+		}
+
 
 		if (!strcmp(cfg::appeui, "0000000000000000") && !strcmp(cfg::deveui, "0000000000000000") && !strcmp(cfg::appkey, "00000000000000000000000000000000"))
 		{
@@ -3774,7 +3837,7 @@ void loop(void)
 	}
 
 	if ((msSince(last_display_millis) > DISPLAY_UPDATE_INTERVAL_MS) &&
-		(cfg::has_display || cfg::has_ssd1306 ))
+		(cfg::has_display && cfg::has_ssd1306 ))
 	{
 		display_values();
 		last_display_millis = act_milli;

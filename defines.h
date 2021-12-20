@@ -52,8 +52,6 @@ constexpr const unsigned long ONE_DAY_IN_MS = 24 * 60 * 60 * 1000;
 constexpr const unsigned long PAUSE_BETWEEN_UPDATE_ATTEMPTS_MS = ONE_DAY_IN_MS;		// check for firmware updates once a day
 constexpr const unsigned long DURATION_BEFORE_FORCED_RESTART_MS = ONE_DAY_IN_MS * 28;	// force a reboot every ~4 weeks
 
-
-#if defined(ESP32)
 //GPIO Pins
 // the IO pins which can be used for what depends on the following:
 //   - The board which is used
@@ -67,33 +65,49 @@ constexpr const unsigned long DURATION_BEFORE_FORCED_RESTART_MS = ONE_DAY_IN_MS 
 //     - some IOs can only be used for inputs (34, 35, 36, 39)
 // see https://randomnerdtutorials.com/esp32-pinout-reference-gpios/
 //     https://github.com/va3wam/TWIPi/blob/master/Eagle/doc/feather-pinout-map.pdf
-#define D0_STRAPPING 0
-#if defined(NO_USB_SERIAL_ON_UART0)
-#define D1 1  // often used for USB serial RX
-#endif
-#define D2_STRAPPING 2
-#if defined(NO_USB_SERIAL_ON_UART0)
-#define D3 3  // often used USB serial TX
-#endif
+
+#if defined(ARDUINO_TTGO_LoRa32_v21new)
+#define D0 0
+#define D1 1
+#define D2 2
+#define D3 3
 #define D4 4
+#define D12 12
+#define D13 13
+#define D14 14
+#define D15 15
+#define D19 19
+#define D21 21
+#define D22 22
+#define D23 23
+#define D25 25
+#define D34 34
+#define D35 35
+#define D36 36
+#define D39 39
+#endif
+
+#if defined(ARDUINO_HELTEC_WIFI_LORA_32_V2)
+#define D0 0
+#define D2 2
+#define D4 4
+#define D15 15
 #define D5 5
+#define D12 12
 #define D13 13
 // pins 12 to 15 are needed by JTAG and should not be used to allow debugging (if you can afford it)
 //#define D9 9
 //#define D10 10
 //
-#if not defined(USING_JTAG_DEBUGGER_PINS)
-#define D12_JTAG_TDI_LOW_DURING_BOOT 12
-#define D13_JTAG_TCK 13
-#define D14_JTAG_TMS 14
-#define D15_JTAG_TDO_HIGH_DURING_BOOT 15
-#endif
+// #if not defined(USING_JTAG_DEBUGGER_PINS)
+// #define D12_JTAG_TDI_LOW_DURING_BOOT 12
+// #define D13_JTAG_TCK 13
+// #define D14_JTAG_TMS 14
+// #define D15_JTAG_TDO_HIGH_DURING_BOOT 15
+// #endif
 
-#if defined(ESP32_WROOM_MODULE)
-// these two pins are used to access PSRAM on WROVER modules
-#define D16_WROOM_ONLY 16
-#define D17_WROOM_ONLY 17
-#endif
+#define D16 16
+#define D17 17
 #define D18 18
 #define D19 19
 #define D21 21
@@ -104,34 +118,8 @@ constexpr const unsigned long DURATION_BEFORE_FORCED_RESTART_MS = ONE_DAY_IN_MS 
 #define D27 27
 #define D32 32
 #define D33 33
-#define D34_INPUTONLY 34
-#define D35_INPUTONLY 35
-#define D36_INPUTONLY 36
-#define D39_INPUTONLY 39
-
-// RFM69 FSK module
-#define RF69_FREQ 868.0
-#define CLIENT_ADDRESS 2
-#define SERVER_ADDRESS 100
+#define D34 34
+#define D35 35
+#define D36 36
+#define D39 39
 #endif
-
-// smaller cipher list to speed up TLS connections
-// static const uint16_t suites_P[] PROGMEM = {
-//     BR_TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
-//     BR_TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
-//     BR_TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-//     BR_TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-//     BR_TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
-//     BR_TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-//     BR_TLS_ECDH_ECDSA_WITH_AES_128_GCM_SHA256,
-//     BR_TLS_ECDH_RSA_WITH_AES_128_GCM_SHA256,
-//     BR_TLS_ECDH_ECDSA_WITH_AES_256_GCM_SHA384,
-//     BR_TLS_ECDH_RSA_WITH_AES_256_GCM_SHA384,
-//     BR_TLS_RSA_WITH_AES_128_GCM_SHA256,
-//     BR_TLS_RSA_WITH_AES_256_GCM_SHA384,
-// // basic ciphers used in axTLS
-//     BR_TLS_RSA_WITH_AES_128_CBC_SHA256,
-//     BR_TLS_RSA_WITH_AES_256_CBC_SHA256,
-//     BR_TLS_RSA_WITH_AES_128_CBC_SHA,
-//     BR_TLS_RSA_WITH_AES_256_CBC_SHA,
-//};

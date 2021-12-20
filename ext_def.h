@@ -71,32 +71,74 @@ static const char URL_CUSTOM2[] PROGMEM = "/data.php";
 #define PWD_CUSTOM2 ""
 #define SSL_CUSTOM2 0
 
-//  === pin assignments for dev kit board ===================================
-#ifdef ESP32
-#define ONEWIRE_PIN D32
-#define PM_SERIAL_RX D27
-#define PM_SERIAL_TX D33
-// define serial interface pins for Next PM Sensor
-#define NPM_SERIAL_RX D1
-#define NPM_SERIAL_TX D2
-#define PIN_CS D13
+//GPIO Pins
+// the IO pins which can be used for what depends on the following:
+//   - The board which is used
+//     - onboard peripherials like LCD or LoRa chips which already occupy an IO pin
+//     - the ESP32 module which is used
+//         - the WROVER board uses the IOs 16 and 17 to access the PSRAW
+//         - on WROOM boards the IOs 16 and 17 can be freely used
+//   - if JTAG debugging shall be used
+//   - some IOs have constraints
+//     - configuration of ESP32 module configuration options ("strapping") like operating voltage and boot medium
+//     - some IOs can only be used for inputs (34, 35, 36, 39)
+// see https://randomnerdtutorials.com/esp32-pinout-reference-gpios/
+//     https://github.com/va3wam/TWIPi/blob/master/Eagle/doc/feather-pinout-map.pdf
 
-#if defined(FLIP_I2C_PMSERIAL) // exchange the pins of the ports to use external i2c connector for gps
-#define I2C_PIN_SCL D23
-#define I2C_PIN_SDA D19
-#define GPS_SERIAL_RX D22
-#define GPS_SERIAL_TX D21
-#else
+//  === pin assignments for the LoRa module according to LMIC library ===================================
+
+// ttgo:
+// PIN_SX1276_NSS = 18
+// PIN_SX1276_NRESET = 23 
+// PIN_SX1276_DIO0 = 26
+// PIN_SX1276_DIO1 = 33 
+// PIN_SX1276_DIO2 = 32 
+// PIN_SX1276_ANT_SWITCH_RX = UNUSED_PIN,
+// PIN_SX1276_ANT_SWITCH_TX_BOOST = UNUSED_PIN,
+// PIN_SX1276_ANT_SWITCH_TX_RFO = UNUSED_PIN,
+// PIN_VDD_BOOST_ENABLE = UNUSED_PIN,
+
+
+// Heltec:
+// PIN_SX1276_NSS = 18,
+// PIN_SX1276_NRESET = 14
+// PIN_SX1276_DIO0 = 26
+// PIN_SX1276_DIO1 = 35
+// PIN_SX1276_DIO2 = 34
+// PIN_SX1276_ANT_SWITCH_RX = UNUSED_PIN,
+// PIN_SX1276_ANT_SWITCH_TX_BOOST = UNUSED_PIN,
+// PIN_SX1276_ANT_SWITCH_TX_RFO = UNUSED_PIN,
+// PIN_VDD_BOOST_ENABLE = UNUSED_PIN,
+
+#if defined (ARDUINO_TTGO_LoRa32_v21new)
+//#define ONEWIRE_PIN D25
+#define PM_SERIAL_RX D19
+#define PM_SERIAL_TX D23
+
+
+
 #define I2C_PIN_SCL D22
 #define I2C_PIN_SDA D21
-#define GPS_SERIAL_RX D19
-#define GPS_SERIAL_TX D23
+#define GPS_SERIAL_RX D12
+#define GPS_SERIAL_TX D13
 #endif
-#define PPD_PIN_PM1 GPS_SERIAL_TX
-#define PPD_PIN_PM2 GPS_SERIAL_RX
-//#define RFM69_CS D0
-//#define RFM69_RST D2
-//#define RFM69_INT D4
+
+#if defined(ARDUINO_HELTEC_WIFI_LORA_32_V2)
+
+#define I2C_SCREEN_SCL D15
+#define I2C_SCREEN_SDA D4
+#define OLED_RESET D16
+#define PM_SERIAL_RX D23
+#define PM_SERIAL_TX D17
+
+// #define ONEWIRE_PIN D32
+// #define PM_SERIAL_RX D27
+// #define PM_SERIAL_TX D33
+
+#define I2C_PIN_SCL D22
+#define I2C_PIN_SDA D21
+#define GPS_SERIAL_RX D12
+#define GPS_SERIAL_TX D13
 #endif
 
 // SDS011, the more expensive version of the particle sensor
@@ -115,7 +157,6 @@ static const char URL_CUSTOM2[] PROGMEM = "/data.php";
 // GPS, preferred Neo-6M
 #define GPS_READ 0
 #define GPS_API_PIN 9
-
 
 // OLED Display SSD1306 connected?
 #define HAS_DISPLAY 1
