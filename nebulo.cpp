@@ -3285,37 +3285,52 @@ static osjob_t sendjob;
 // cycle limitations).
 //const unsigned TX_INTERVAL = 60; // Replaced with cfg::time_send
 
-void ToByteArray()
-{
 
-	unsigned long number1 = strtoul(cfg::appeui, nullptr, 16);
-	unsigned long number2 = strtoul(cfg::deveui, nullptr, 16);
-	unsigned long number3 = strtoul(cfg::appkey, nullptr, 16);
 
-	for (int i = 7; i >= 0; i--) // start with lowest byte of number  //INVERSÈ????
-	{
-		appeui_hex[i] = number1 & 0xFF; // or: = byte( number);
-		number1 >>= 8;					// get next byte into position
-	}
+ void ToByteArray()
+ {
+	 String appeui_str = cfg::appeui;
+	 String deveui_str = cfg::deveui;
+	 String appkey_str = cfg::appkey;
+	 Debug.println(appeui_str);
+	 Debug.println(deveui_str);
+	 Debug.println(appkey_str);
 
-	for (int i = 7; i >= 0; i--) // start with lowest byte of number  //INVERSÈ????
-	{
-		deveui_hex[i] = number1 & 0xFF; // or: = byte( number);
-		number2 >>= 8;					// get next byte into position
-	}
+	 int j = 0;
+	 int k = 0;
+	 //int l = 0;
 
-	for (int i = 15; i >= 0; i--) // start with lowest byte of number  //INVERSÈ????
-	{
-		appkey_hex[i] = number1 & 0xFF; // or: = byte( number);
-		number3 >>= 8;					// get next byte into position
-	}
+	 for (unsigned int i = 0; i < appeui_str.length(); i += 2)
+	 {
+		 String byteString = appeui_str.substring(i, i+2);
+		 Debug.println(byteString);
+		 byte byte = (char)strtol(byteString.c_str(), NULL, 16);
+		 Debug.println(byte,HEX);
+		 appeui_hex[(appeui_str.length()/2) -1 - j] = byte; //reverse
+		 j += 1;
+	 }
 
-	// for (int i = 0; i < 4; i++)
-	// {
-	// 	Serial.print("0x");
-	// 	Serial.println(CardNumberByte[i], HEX);
-	// }
-}
+	 for (unsigned int i = 0; i < deveui_str.length(); i += 2)
+	 {
+		 String byteString = deveui_str.substring(i, i + 2);
+		 Debug.println(byteString);
+		 byte byte = (char)strtol(byteString.c_str(), NULL, 16);
+		 Debug.println(byte, HEX);
+		 deveui_hex[(deveui_str.length() / 2) - 1 - k] = byte; //reverse
+		 k += 1;
+	 }
+
+	 for (unsigned int i = 0; i < appkey_str.length(); i += 2)
+	 {
+		 String byteString = appkey_str.substring(i, i + 2);
+		 Debug.println(byteString);
+		 byte byte = (char)strtol(byteString.c_str(), NULL, 16);
+		 Debug.println(byte, HEX);
+		 //appkey_hex[(appkey_str.length() / 2) - 1 - l] = byte; // reverse
+		 appkey_hex[i] = byte; //not reverse
+		 //l += 1;
+	 }
+ }
 
 void printHex2(unsigned v)
 {
@@ -3665,6 +3680,37 @@ void setup(void)
 
 	init_display();
 
+	ToByteArray();
+
+	Debug.printf("APPEUI:\n");
+	for (int i = 0; i < 8; i++)
+	{
+		Debug.printf(" %02x", appeui_hex[i]);
+		if (i == 7)
+		{
+			Debug.printf("\n");
+		}
+	}
+
+	Debug.printf("DEVEUI:\n");
+	for (int i = 0; i < 8; i++)
+	{
+		Debug.printf(" %02x", deveui_hex[i]);
+		if (i == 7)
+		{
+			Debug.printf("\n");
+		}
+	}
+
+	Debug.printf("APPKEY:\n");
+	for (int i = 0; i < 16; i++)
+	{
+		Debug.printf(" %02x", appkey_hex[i]);
+		if (i == 15)
+		{
+			Debug.printf("\n");
+		}
+	}
 
 	// #if defined(ARDUINO_HELTEC_WIFI_LORA_32_V2)
 	// 	delay(2000);
@@ -3711,43 +3757,37 @@ void setup(void)
 	if (cfg::has_lora)
 	{
 
-		//Compare char array to string!
-		// if (!strcmp(cfg::appeui, "0000000000000000") || !strcmp(cfg::deveui, "0000000000000000") || !strcmp(cfg::appkey, "00000000000000000000000000000000"))
+		// ToByteArray();
+
+		// Debug.printf("APPEUI:\n");
+		// for (int i = 0; i < 8; i++)
 		// {
-		// 	connectWifi();
+		// 	Debug.printf(" %02x", appeui_hex[i]);
+		// 	if (i == 7)
+		// 	{
+		// 		Debug.printf("\n");
+		// 	}
 		// }
 
-		ToByteArray();
+		// Debug.printf("DEVEUI:\n");
+		// for (int i = 0; i < 8; i++)
+		// {
+		// 	Debug.printf(" %02x", deveui_hex[i]);
+		// 	if (i == 7)
+		// 	{
+		// 		Debug.printf("\n");
+		// 	}
+		// }
 
-		Debug.printf("APPEUI:\n");
-		for (int i = 0; i < 8; i++)
-		{
-			Debug.printf(" %02x", appeui_hex[i]);
-			if (i == 7)
-			{
-				Debug.printf("\n");
-			}
-		}
-
-		Debug.printf("DEVEUI:\n");
-		for (int i = 0; i < 8; i++)
-		{
-			Debug.printf(" %02x", deveui_hex[i]);
-			if (i == 7)
-			{
-				Debug.printf("\n");
-			}
-		}
-
-		Debug.printf("APPKEY:\n");
-		for (int i = 0; i < 16; i++)
-		{
-			Debug.printf(" %02x", appkey_hex[i]);
-			if (i == 15)
-			{
-				Debug.printf("\n");
-			}
-		}
+		// Debug.printf("APPKEY:\n");
+		// for (int i = 0; i < 16; i++)
+		// {
+		// 	Debug.printf(" %02x", appkey_hex[i]);
+		// 	if (i == 15)
+		// 	{
+		// 		Debug.printf("\n");
+		// 	}
+		// }
 
 
 		if (!strcmp(cfg::appeui, "0000000000000000") && !strcmp(cfg::deveui, "0000000000000000") && !strcmp(cfg::appkey, "00000000000000000000000000000000"))
@@ -3766,6 +3806,9 @@ void setup(void)
 
 			LMIC_setLinkCheckMode(0);
 			LMIC_setDrTxpow(DR_SF7, 14); //BONNE OPTION????
+
+	//Set the data rate to Spreading Factor 7.  This is the fastest supported rate for 125 kHz channels, and it
+    // minimizes air time and battery power. Set the transmission power to 14 dBi (25 mW).
 
 			// Start job (sending automatically starts OTAA too)
 			do_send(&sendjob); //ATTENTION PREMIER START!!!!!
