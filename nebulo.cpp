@@ -2851,10 +2851,6 @@ static void display_values()
 			display_lines[2] = emptyString;
 			break;
 		case 2:
-			display_header = FPSTR(SENSORS_SPS30);
-			display_lines[0] = "PM: " + check_display_value(pm01_value, -1, 1, 4) + " " + check_display_value(pm25_value, -1, 1, 4) + " " + check_display_value(pm04_value, -1, 1, 4) + " " + check_display_value(pm10_value, -1, 1, 4);
-			display_lines[1] = "NC: " + check_display_value(nc005_value, -1, 0, 3) + " " + check_display_value(nc010_value, -1, 0, 3) + " " + check_display_value(nc025_value, -1, 0, 3) + " " + check_display_value(nc040_value, -1, 0, 3) + " " + check_display_value(nc100_value, -1, 0, 3);
-			display_lines[2] = std::move(tmpl(F("TPS: {v} µm"), check_display_value(tps_value, -1, 2, 5)));
 			break;
 		case 3:
 			display_header = t_sensor;
@@ -3292,9 +3288,9 @@ static osjob_t sendjob;
 	 String appeui_str = cfg::appeui;
 	 String deveui_str = cfg::deveui;
 	 String appkey_str = cfg::appkey;
-	 Debug.println(appeui_str);
-	 Debug.println(deveui_str);
-	 Debug.println(appkey_str);
+	//  Debug.println(appeui_str);
+	//  Debug.println(deveui_str);
+	//  Debug.println(appkey_str);
 
 	 int j = 0;
 	 int k = 0;
@@ -3303,9 +3299,9 @@ static osjob_t sendjob;
 	 for (unsigned int i = 0; i < appeui_str.length(); i += 2)
 	 {
 		 String byteString = appeui_str.substring(i, i+2);
-		 Debug.println(byteString);
+		//  Debug.println(byteString);
 		 byte byte = (char)strtol(byteString.c_str(), NULL, 16);
-		 Debug.println(byte,HEX);
+		//  Debug.println(byte,HEX);
 		 appeui_hex[(appeui_str.length()/2) -1 - j] = byte; //reverse
 		 j += 1;
 	 }
@@ -3313,9 +3309,9 @@ static osjob_t sendjob;
 	 for (unsigned int i = 0; i < deveui_str.length(); i += 2)
 	 {
 		 String byteString = deveui_str.substring(i, i + 2);
-		 Debug.println(byteString);
+		//  Debug.println(byteString);
 		 byte byte = (char)strtol(byteString.c_str(), NULL, 16);
-		 Debug.println(byte, HEX);
+		//  Debug.println(byte, HEX);
 		 deveui_hex[(deveui_str.length() / 2) - 1 - k] = byte; //reverse
 		 k += 1;
 	 }
@@ -3323,9 +3319,9 @@ static osjob_t sendjob;
 	 for (unsigned int i = 0; i < appkey_str.length(); i += 2)
 	 {
 		 String byteString = appkey_str.substring(i, i + 2);
-		 Debug.println(byteString);
+		//  Debug.println(byteString);
 		 byte byte = (char)strtol(byteString.c_str(), NULL, 16);
-		 Debug.println(byte, HEX);
+		//  Debug.println(byte, HEX);
 		 //appkey_hex[(appkey_str.length() / 2) - 1 - l] = byte; // reverse
 		 appkey_hex[i] = byte; //not reverse
 		 //l += 1;
@@ -3680,46 +3676,37 @@ void setup(void)
 
 	init_display();
 
-	ToByteArray();
+	// ToByteArray();
 
-	Debug.printf("APPEUI:\n");
-	for (int i = 0; i < 8; i++)
-	{
-		Debug.printf(" %02x", appeui_hex[i]);
-		if (i == 7)
-		{
-			Debug.printf("\n");
-		}
-	}
+	// Debug.printf("APPEUI:\n");
+	// for (int i = 0; i < 8; i++)
+	// {
+	// 	Debug.printf(" %02x", appeui_hex[i]);
+	// 	if (i == 7)
+	// 	{
+	// 		Debug.printf("\n");
+	// 	}
+	// }
 
-	Debug.printf("DEVEUI:\n");
-	for (int i = 0; i < 8; i++)
-	{
-		Debug.printf(" %02x", deveui_hex[i]);
-		if (i == 7)
-		{
-			Debug.printf("\n");
-		}
-	}
+	// Debug.printf("DEVEUI:\n");
+	// for (int i = 0; i < 8; i++)
+	// {
+	// 	Debug.printf(" %02x", deveui_hex[i]);
+	// 	if (i == 7)
+	// 	{
+	// 		Debug.printf("\n");
+	// 	}
+	// }
 
-	Debug.printf("APPKEY:\n");
-	for (int i = 0; i < 16; i++)
-	{
-		Debug.printf(" %02x", appkey_hex[i]);
-		if (i == 15)
-		{
-			Debug.printf("\n");
-		}
-	}
-
-	// #if defined(ARDUINO_HELTEC_WIFI_LORA_32_V2)
-	// 	delay(2000);
-	// 	oled_ssd1306->setTextAlignment(TEXT_ALIGN_CENTER);
-	// 	oled_ssd1306->clear();
-	// 	oled_ssd1306->drawString(58, 22, "NEBULO STARTS");
-	// 	oled_ssd1306->display();
-	// 	delay(2000);
-	// #endif
+	// Debug.printf("APPKEY:\n");
+	// for (int i = 0; i < 16; i++)
+	// {
+	// 	Debug.printf(" %02x", appkey_hex[i]);
+	// 	if (i == 15)
+	// 	{
+	// 		Debug.printf("\n");
+	// 	}
+	// }
 
 	debug_outln_info(F("\nChipId: "), esp_chipid);
 	//debug_outln_info(F("\nMAC Id: "), esp_mac_id);
@@ -3757,37 +3744,37 @@ void setup(void)
 	if (cfg::has_lora)
 	{
 
-		// ToByteArray();
+		ToByteArray();
 
-		// Debug.printf("APPEUI:\n");
-		// for (int i = 0; i < 8; i++)
-		// {
-		// 	Debug.printf(" %02x", appeui_hex[i]);
-		// 	if (i == 7)
-		// 	{
-		// 		Debug.printf("\n");
-		// 	}
-		// }
+		Debug.printf("APPEUI:\n");
+		for (int i = 0; i < 8; i++)
+		{
+			Debug.printf(" %02x", appeui_hex[i]);
+			if (i == 7)
+			{
+				Debug.printf("\n");
+			}
+		}
 
-		// Debug.printf("DEVEUI:\n");
-		// for (int i = 0; i < 8; i++)
-		// {
-		// 	Debug.printf(" %02x", deveui_hex[i]);
-		// 	if (i == 7)
-		// 	{
-		// 		Debug.printf("\n");
-		// 	}
-		// }
+		Debug.printf("DEVEUI:\n");
+		for (int i = 0; i < 8; i++)
+		{
+			Debug.printf(" %02x", deveui_hex[i]);
+			if (i == 7)
+			{
+				Debug.printf("\n");
+			}
+		}
 
-		// Debug.printf("APPKEY:\n");
-		// for (int i = 0; i < 16; i++)
-		// {
-		// 	Debug.printf(" %02x", appkey_hex[i]);
-		// 	if (i == 15)
-		// 	{
-		// 		Debug.printf("\n");
-		// 	}
-		// }
+		Debug.printf("APPKEY:\n");
+		for (int i = 0; i < 16; i++)
+		{
+			Debug.printf(" %02x", appkey_hex[i]);
+			if (i == 15)
+			{
+				Debug.printf("\n");
+			}
+		}
 
 
 		if (!strcmp(cfg::appeui, "0000000000000000") && !strcmp(cfg::deveui, "0000000000000000") && !strcmp(cfg::appkey, "00000000000000000000000000000000"))
