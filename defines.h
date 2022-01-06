@@ -66,6 +66,27 @@ constexpr const unsigned long DURATION_BEFORE_FORCED_RESTART_MS = ONE_DAY_IN_MS 
 // see https://randomnerdtutorials.com/esp32-pinout-reference-gpios/
 //     https://github.com/va3wam/TWIPi/blob/master/Eagle/doc/feather-pinout-map.pdf
 
+#if not defined(ARDUINO_TTGO_LoRa32_v21new) and not defined(ARDUINO_TTGO_LoRa32_v21new)
+#define D0 0
+#define D1 1
+#define D2 2
+#define D3 3
+#define D4 4
+#define D12 12
+#define D13 13
+#define D14 14
+#define D15 15
+#define D19 19
+#define D21 21
+#define D22 22
+#define D23 23
+#define D25 25
+#define D34 34
+#define D35 35
+#define D36 36
+#define D39 39
+#endif
+
 #if defined(ARDUINO_TTGO_LoRa32_v21new)
 #define D0 0
 #define D1 1

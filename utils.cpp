@@ -13,17 +13,7 @@
  *****************************************************************/
 String sha1Hex(const String& s) {
 	char sha1sum_output[20];
-
-#if defined(ESP8266)
-	br_sha1_context sc;
-
-	br_sha1_init(&sc);
-	br_sha1_update(&sc, s.c_str(), s.length());
-	br_sha1_out(&sc, sha1sum_output);
-#endif
-#if defined(ESP32)
 	esp_sha(SHA1, (const unsigned char*) s.c_str(), s.length(), (unsigned char*)sha1sum_output);
-#endif
 	String r;
 	for (uint16_t i = 0; i < 20; i++) {
 		char hex[3];
@@ -181,59 +171,30 @@ float readCorrectionOffset(const char* correction) {
 
 LoggingSerial Debug;
 
-#if defined(ESP8266)
-LoggingSerial::LoggingSerial()
-    : HardwareSerial(UART0)
-    , m_buffer(new circular_queue<uint8_t>(LARGE_STR))
-{
-}
-#endif
-
-#if defined(ESP32)
 LoggingSerial::LoggingSerial()
     : HardwareSerial(0)
 {
 	m_buffer = xQueueCreate(LARGE_STR, sizeof(uint8_t));
 }
-#endif
 
 size_t LoggingSerial::write(uint8_t c)
 {
-#if defined(ESP32)
 	xQueueSendToBack(m_buffer, ( void * ) &c, ( TickType_t ) 1);
-#endif
-#if defined(ESP8266)
-	m_buffer->push(c);
-#endif
 	return HardwareSerial::write(c);
 }
 
 size_t LoggingSerial::write(const uint8_t *buffer, size_t size)
 {
-#if defined(ESP32)
 	for(int i = 0; i < size; i++) {
 		xQueueSendToBack(m_buffer, ( void * ) &buffer[i], ( TickType_t ) 1);
 	}
-#endif
-#if defined(ESP8266)
-	m_buffer->push_n(buffer, size);
-#endif
 	return HardwareSerial::write(buffer, size);
 }
 
 String LoggingSerial::popLines()
 {
 	String r;
-#if defined(ESP8266)
-	while (m_buffer->available() > 0) {
-		uint8_t c = m_buffer->pop();
-		r += (char) c;
 
-		if (c == '\n' && r.length() > m_buffer->available())
-			break;
-	}
-#endif
-#if defined(ESP32)
 	uint8_t c;
 	while (xQueueReceive(m_buffer, &(c ), (TickType_t) 1 )) {
 		r += (char) c;
@@ -241,7 +202,6 @@ String LoggingSerial::popLines()
 		if (c == '\n' && r.length() > 10)
 			break;
 	}
-#endif
 	return r;
 }
 
@@ -357,67 +317,6 @@ bool SDS_cmd(PmSensorCmd cmd) {
 	return cmd != PmSensorCmd::Stop;
 }
 
-/*****************************************************************
- * send Plantower PMS sensor command start, stop, cont. mode     *
- *****************************************************************/
-bool PMS_cmd(PmSensorCmd cmd) {
-	static constexpr uint8_t start_cmd[] PROGMEM = {
-		0x42, 0x4D, 0xE4, 0x00, 0x01, 0x01, 0x74
-	};
-	static constexpr uint8_t stop_cmd[] PROGMEM = {
-		0x42, 0x4D, 0xE4, 0x00, 0x00, 0x01, 0x73
-	};
-	static constexpr uint8_t continuous_mode_cmd[] PROGMEM = {
-		0x42, 0x4D, 0xE1, 0x00, 0x01, 0x01, 0x71
-	};
-	constexpr uint8_t cmd_len = array_num_elements(start_cmd);
-
-	uint8_t buf[cmd_len];
-	switch (cmd) {
-	case PmSensorCmd::Start:
-		memcpy_P(buf, start_cmd, cmd_len);
-		break;
-	case PmSensorCmd::Stop:
-		memcpy_P(buf, stop_cmd, cmd_len);
-		break;
-	case PmSensorCmd::ContinuousMode:
-		memcpy_P(buf, continuous_mode_cmd, cmd_len);
-		break;
-	}
-	serialSDS.write(buf, cmd_len);
-	return cmd != PmSensorCmd::Stop;
-}
-
-/*****************************************************************
- * send Honeywell PMS sensor command start, stop, cont. mode     *
- *****************************************************************/
-bool HPM_cmd(PmSensorCmd cmd) {
-	static constexpr uint8_t start_cmd[] PROGMEM = {
-		0x68, 0x01, 0x01, 0x96
-	};
-	static constexpr uint8_t stop_cmd[] PROGMEM = {
-		0x68, 0x01, 0x02, 0x95
-	};
-	static constexpr uint8_t continuous_mode_cmd[] PROGMEM = {
-		0x68, 0x01, 0x40, 0x57
-	};
-	constexpr uint8_t cmd_len = array_num_elements(start_cmd);
-
-	uint8_t buf[cmd_len];
-	switch (cmd) {
-	case PmSensorCmd::Start:
-		memcpy_P(buf, start_cmd, cmd_len);
-		break;
-	case PmSensorCmd::Stop:
-		memcpy_P(buf, stop_cmd, cmd_len);
-		break;
-	case PmSensorCmd::ContinuousMode:
-		memcpy_P(buf, continuous_mode_cmd, cmd_len);
-		break;
-	}
-	serialSDS.write(buf, cmd_len);
-	return cmd != PmSensorCmd::Stop;
-}
 
 /*********************************************************************************
  * send Tera Sensor Next PM sensor command state, change, concentration, version *

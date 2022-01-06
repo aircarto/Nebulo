@@ -110,13 +110,20 @@ static const char URL_CUSTOM2[] PROGMEM = "/data.php";
 // PIN_SX1276_ANT_SWITCH_TX_RFO = UNUSED_PIN,
 // PIN_VDD_BOOST_ENABLE = UNUSED_PIN,
 
+#if not defined(ARDUINO_TTGO_LoRa32_v21new) and not defined(ARDUINO_TTGO_LoRa32_v21new)
+//#define ONEWIRE_PIN D25
+#define PM_SERIAL_RX D19
+#define PM_SERIAL_TX D23
+#define I2C_PIN_SCL D22
+#define I2C_PIN_SDA D21
+#define GPS_SERIAL_RX D12
+#define GPS_SERIAL_TX D13
+#endif
+
 #if defined (ARDUINO_TTGO_LoRa32_v21new)
 //#define ONEWIRE_PIN D25
 #define PM_SERIAL_RX D19
 #define PM_SERIAL_TX D23
-
-
-
 #define I2C_PIN_SCL D22
 #define I2C_PIN_SDA D21
 #define GPS_SERIAL_RX D12
@@ -159,14 +166,13 @@ static const char URL_CUSTOM2[] PROGMEM = "/data.php";
 #define GPS_API_PIN 9
 
 // OLED Display SSD1306 connected?
-#define HAS_DISPLAY 1
 #define HAS_SSD1306 1
-
-// OLED Display um 180° gedreht?
-#define HAS_FLIPPED_DISPLAY 0
 
 // Show wifi info on displays
 #define DISPLAY_WIFI_INFO 1
+
+// Show wifi info on displays
+#define DISPLAY_LORA_INFO 0
 
 // Show device info on displays
 #define DISPLAY_DEVICE_INFO 1

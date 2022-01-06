@@ -92,11 +92,10 @@ namespace cfg
 	bool send2csv = SEND2CSV;
 
 	// (in)active displays
-	bool has_display = HAS_DISPLAY; // OLED with SSD1306 and I2C
 	bool has_ssd1306 = HAS_SSD1306;
-	bool has_flipped_display = HAS_FLIPPED_DISPLAY;
 
 	bool display_wifi_info = DISPLAY_WIFI_INFO;
+	bool display_lora_info = DISPLAY_LORA_INFO; 
 	bool display_device_info = DISPLAY_DEVICE_INFO;
 
 	// API settings
@@ -119,6 +118,7 @@ namespace cfg
 	char user_custom2[LEN_USER_CUSTOM2] = USER_CUSTOM2;
 	char pwd_custom2[LEN_CFG_PASSWORD] = PWD_CUSTOM2;
 
+    //First load
 	void initNonTrivials(const char *id)
 	{
 		strcpy(cfg::current_lang, CURRENT_LANG);
@@ -162,14 +162,14 @@ WebServer server(80);
  * Display definitions                                           *
  *****************************************************************/
 
-SSD1306Wire *oled_ssd1306 = nullptr;
+SSD1306Wire *oled_ssd1306 = nullptr; //as pointer
 
 /*****************************************************************
  * Serial declarations                                           *
  *****************************************************************/
 
 #define serialSDS (Serial1)
-#define serialGPS (&(Serial2))
+#define serialGPS (&(Serial2))  //as pointer
 #define serialNPM (Serial1) 
 
 /*****************************************************************
@@ -967,7 +967,7 @@ static void webserver_config_send_body_get(String &page_content)
 	page_content += FPSTR(WEB_LF_B);
 	page_content += FPSTR(INTL_LORA_EXPLANATION);
 	page_content += FPSTR(WEB_B_BR_BR);
-	add_form_checkbox(Config_has_lora, FPSTR(INTL_LORA_ACTIVATION)); ////////
+	add_form_checkbox(Config_has_lora, FPSTR(INTL_LORA_ACTIVATION)); 
 	page_content += FPSTR(TABLE_TAG_OPEN);
 	add_form_input(page_content, Config_appeui, FPSTR("APPEUI"), LEN_APPEUI - 1);
 	add_form_input(page_content, Config_deveui, FPSTR("DEVEUI"), LEN_DEVEUI - 1);
@@ -976,15 +976,15 @@ static void webserver_config_send_body_get(String &page_content)
 	server.sendContent(page_content);
 	page_content = tmpl(FPSTR(WEB_DIV_PANEL), String(3));
 
-	add_form_checkbox(Config_has_display, FPSTR(INTL_DISPLAY));
-	add_form_checkbox(Config_has_ssd1306, FPSTR(INTL_SH1106));
-	add_form_checkbox(Config_has_flipped_display, FPSTR(INTL_FLIP_DISPLAY));
+	//add_form_checkbox(Config_has_display, FPSTR(INTL_DISPLAY));
+	add_form_checkbox(Config_has_ssd1306, FPSTR(INTL_SSD1306));
 
 	// Paginate page after ~ 1500 Bytes
 	server.sendContent(page_content);
 	page_content = emptyString;
 
 	add_form_checkbox(Config_display_wifi_info, FPSTR(INTL_DISPLAY_WIFI_INFO));
+	add_form_checkbox(Config_display_lora_info, FPSTR(INTL_DISPLAY_LORA_INFO));
 	add_form_checkbox(Config_display_device_info, FPSTR(INTL_DISPLAY_DEVICE_INFO));
 
 	server.sendContent(page_content);
@@ -1954,7 +1954,8 @@ debug_outln_info_bool(F("CSV: "), cfg::send2csv);
 debug_outln_info_bool(F("AirCarto: "), cfg::send2custom);
 debug_outln_info_bool(F("AtmoSud: "), cfg::send2custom2);
 debug_outln_info(FPSTR(DBG_TXT_SEP));
-debug_outln_info_bool(F("Display: "), cfg::has_display);
+//debug_outln_info_bool(F("Display: "), cfg::has_display);
+debug_outln_info_bool(F("Display: "), cfg::has_ssd1306);
 debug_outln_info(F("Debug: "), String(cfg::debug));
 wificonfig_loop = false; //VOIR ICI
 }
@@ -2200,6 +2201,8 @@ static void fetchSensorBMX280(String &s)
 	}
 	else
 	{
+		//last_value_BMX280_T = t + readCorrectionOffset(cfg::temp_correction);
+		last_value_BMX280_T = t;
 		last_value_BMX280_P = p;
 		if (bmx280.sensorID() == BME280_SENSOR_ID)
 		{
@@ -2750,18 +2753,15 @@ static void display_values()
 	float p_value = -1.0;
 	String t_sensor, h_sensor, p_sensor;
 	float pm01_value = -1.0;
-	float pm04_value = -1.0;
-	float pm10_value = -1.0;
 	float pm25_value = -1.0;
+	float pm10_value = -1.0;
+	String pm01_sensor;
 	String pm10_sensor;
 	String pm25_sensor;
-	float nc005_value = -1.0;
 	float nc010_value = -1.0;
 	float nc025_value = -1.0;
-	float nc040_value = -1.0;
 	float nc100_value = -1.0;
 	String la_sensor;
-	float tps_value = -1.0;
 	double lat_value = -200.0;
 	double lon_value = -200.0;
 	double alt_value = -1000.0;
@@ -2778,6 +2778,7 @@ static void display_values()
 		pm01_value = last_value_NPM_P0;
 		pm10_value = last_value_NPM_P1;
 		pm25_value = last_value_NPM_P2;
+		pm01_sensor = FPSTR(SENSORS_NPM);
 		pm10_sensor = FPSTR(SENSORS_NPM);
 		pm25_sensor = FPSTR(SENSORS_NPM);
 		nc010_value = last_value_NPM_N0;
@@ -2787,7 +2788,8 @@ static void display_values()
 
 	if (cfg::sds_read)
 	{
-		pm10_sensor = pm25_sensor = FPSTR(SENSORS_SDS011);
+		pm10_sensor = FPSTR(SENSORS_SDS011);
+		pm25_sensor = FPSTR(SENSORS_SDS011);
 		pm10_value = last_value_SDS_P1;
 		pm25_value = last_value_SDS_P2;
 	}
@@ -2825,112 +2827,125 @@ static void display_values()
 
 	if (cfg::gps_read)
 	{
-		screens[screen_count++] = 5;
+		screens[screen_count++] = 4;
 	}
-	if (cfg::display_wifi_info)
+	if (cfg::display_wifi_info && cfg::has_wifi) 
 	{
-		screens[screen_count++] = 7; // Wifi info
+		screens[screen_count++] = 5; // Wifi info
 	}
 	if (cfg::display_device_info)
 	{
-		screens[screen_count++] = 8; // chipID, firmware and count of measurements
+		screens[screen_count++] = 6; // chipID, firmware and count of measurements
 	}
-	// update size of "screens" when adding more screens!
-	if (cfg::has_display)
+	if (cfg::display_lora_info && cfg::has_lora)
 	{
-		switch (screens[next_display_count % screen_count])
-		{
-		case 1:
-			display_header = pm25_sensor;
-			if (pm25_sensor != pm10_sensor)
-			{
-				display_header += " / " + pm10_sensor;
-			}
-			display_lines[0] = std::move(tmpl(F("PM2.5: {v} µg/m³"), check_display_value(pm25_value, -1, 1, 6)));
-			display_lines[1] = std::move(tmpl(F("PM10: {v} µg/m³"), check_display_value(pm10_value, -1, 1, 6)));
-			display_lines[2] = emptyString;
-			break;
-		case 2:
-			break;
-		case 3:
-			display_header = t_sensor;
-			if (h_sensor && t_sensor != h_sensor)
-			{
-				display_header += " / " + h_sensor;
-			}
-			if ((h_sensor && p_sensor && (h_sensor != p_sensor)) || (h_sensor == "" && p_sensor && (t_sensor != p_sensor)))
-			{
-				display_header += " / " + p_sensor;
-			}
-			if (t_sensor != "")
-			{
-				display_lines[line_count] = "Temp.: ";
-				display_lines[line_count] += check_display_value(t_value, -128, 1, 6);
-				display_lines[line_count++] += " °C";
-			}
-			if (h_sensor != "")
-			{
-				display_lines[line_count] = "Hum.:  ";
-				display_lines[line_count] += check_display_value(h_value, -1, 1, 6);
-				display_lines[line_count++] += " %";
-			}
-			if (p_sensor != "")
-			{
-				display_lines[line_count] = "Pres.: ";
-				display_lines[line_count] += check_display_value(p_value / 100, (-1 / 100.0), 1, 6);
-				display_lines[line_count++] += " hPa";
-			}
-			while (line_count < 3)
-			{
-				display_lines[line_count++] = emptyString;
-			}
-			break;
-		case 4:
-			break;
-		case 5:
-			display_header = "NEO6M";
-			display_lines[0] = "Lat: ";
-			display_lines[0] += check_display_value(lat_value, -200.0, 6, 10);
-			display_lines[1] = "Lon: ";
-			display_lines[1] += check_display_value(lon_value, -200.0, 6, 10);
-			display_lines[2] = "Alt: ";
-			display_lines[2] += check_display_value(alt_value, -1000.0, 2, 10);
-			break;
-		case 6:
-			break;
-		case 7:
-			display_header = F("Wifi info");
-			display_lines[0] = "IP: ";
-			display_lines[0] += WiFi.localIP().toString();
-			display_lines[1] = "SSID: ";
-			display_lines[1] += WiFi.SSID();
-			display_lines[2] = std::move(tmpl(F("Signal: {v} %"), String(calcWiFiSignalQuality(last_signal_strength))));
-			break;
-		case 8:
-			display_header = F("Device Info");
-			display_lines[0] = "ID: ";
-			display_lines[0] += esp_chipid;
-			display_lines[1] = "FW: ";
-			display_lines[1] += SOFTWARE_VERSION;
-			display_lines[2] = F("Measurements: ");
-			display_lines[2] += String(count_sends);
-			break;
-		}
+		screens[screen_count++] = 7; // Lora info
+	}
 
-		if (oled_ssd1306)
+
+	// update size of "screens" when adding more screens!
+	//if (cfg::has_display)
+	if (cfg::has_ssd1306)
 		{
-			oled_ssd1306->clear();
-			oled_ssd1306->displayOn();
-			oled_ssd1306->setTextAlignment(TEXT_ALIGN_CENTER);
-			oled_ssd1306->drawString(64, 1, display_header);
-			oled_ssd1306->setTextAlignment(TEXT_ALIGN_LEFT);
-			oled_ssd1306->drawString(0, 16, display_lines[0]);
-			oled_ssd1306->drawString(0, 28, display_lines[1]);
-			oled_ssd1306->drawString(0, 40, display_lines[2]);
-			oled_ssd1306->setTextAlignment(TEXT_ALIGN_CENTER);
-			oled_ssd1306->drawString(64, 52, displayGenerateFooter(screen_count));
-			oled_ssd1306->display();
-		}
+			switch (screens[next_display_count % screen_count])
+			{
+			case 1:
+				display_header = FPSTR(SENSORS_SDS011);
+				display_lines[0] = std::move(tmpl(F("PM2.5: {v} µg/m³"), check_display_value(pm25_value, -1, 1, 6)));
+				display_lines[1] = std::move(tmpl(F("PM10: {v} µg/m³"), check_display_value(pm10_value, -1, 1, 6)));
+				display_lines[2] = emptyString;
+				break;
+			case 2:
+				display_header = FPSTR(SENSORS_NPM);
+				display_lines[0] = std::move(tmpl(F("PM1: {v} µg/m³"), check_display_value(pm01_value, -1, 1, 6)));
+				display_lines[1] = std::move(tmpl(F("PM2.5: {v} µg/m³"), check_display_value(pm25_value, -1, 1, 6)));
+				display_lines[2] = std::move(tmpl(F("PM10: {v} µg/m³"), check_display_value(pm10_value, -1, 1, 6)));
+				//display_lines[3] = "NC: " + check_display_value(nc010_value, -1, 0, 3) + " " + check_display_value(nc025_value, -1, 0, 3) + " " + check_display_value(nc100_value, -1, 0, 3);
+				break;
+			case 3:
+				display_header = t_sensor;
+				// if (h_sensor && t_sensor != h_sensor)
+				// {
+				// 	display_header += " / " + h_sensor;
+				// }
+				// if ((h_sensor && p_sensor && (h_sensor != p_sensor)) || (h_sensor == "" && p_sensor && (t_sensor != p_sensor)))
+				// {
+				// 	display_header += " / " + p_sensor;
+				// }
+				if (t_sensor != "")
+				{
+					display_lines[line_count] = "Temp.: ";
+					display_lines[line_count] += check_display_value(t_value, -128, 1, 6);
+					display_lines[line_count++] += " °C";
+				}
+				if (h_sensor != "")
+				{
+					display_lines[line_count] = "Hum.:  ";
+					display_lines[line_count] += check_display_value(h_value, -1, 1, 6);
+					display_lines[line_count++] += " %";
+				}
+				if (p_sensor != "")
+				{
+					display_lines[line_count] = "Pres.: ";
+					display_lines[line_count] += check_display_value(p_value / 100, (-1 / 100.0), 1, 6);
+					display_lines[line_count++] += " hPa";
+				}
+				while (line_count < 3)
+				{
+					display_lines[line_count++] = emptyString;
+				}
+				break;
+			case 4:
+				display_header = "NEO6M";
+				display_lines[0] = "Lat: ";
+				display_lines[0] += check_display_value(lat_value, -200.0, 6, 10);
+				display_lines[1] = "Lon: ";
+				display_lines[1] += check_display_value(lon_value, -200.0, 6, 10);
+				display_lines[2] = "Alt: ";
+				display_lines[2] += check_display_value(alt_value, -1000.0, 2, 10);
+				break;
+			case 5:
+				display_header = F("Wifi info");
+				display_lines[0] = "IP: ";
+				display_lines[0] += WiFi.localIP().toString();
+				display_lines[1] = "SSID: ";
+				display_lines[1] += WiFi.SSID();
+				display_lines[2] = std::move(tmpl(F("Signal: {v} %"), String(calcWiFiSignalQuality(last_signal_strength))));
+				break;
+			case 6:
+				display_header = F("Device Info");
+				display_lines[0] = "ID: ";
+				display_lines[0] += esp_chipid;
+				display_lines[1] = "FW: ";
+				display_lines[1] += SOFTWARE_VERSION;
+				display_lines[2] = F("Measurements: ");
+				display_lines[2] += String(count_sends);
+				break;
+			case 7:
+				display_header = F("LoRaWAN Info");
+				display_lines[0] = "APPEUI: ";
+				display_lines[0] += cfg::appeui;
+				display_lines[1] = "DEVEUI: ";
+				display_lines[1] += cfg::deveui;
+				display_lines[2] = "APPKEY: ";
+				display_lines[2] += cfg::appkey;
+				break;
+			}
+
+			if (oled_ssd1306)
+			{
+				oled_ssd1306->clear();
+				oled_ssd1306->displayOn();
+				oled_ssd1306->setTextAlignment(TEXT_ALIGN_CENTER);
+				oled_ssd1306->drawString(64, 1, display_header);
+				oled_ssd1306->setTextAlignment(TEXT_ALIGN_LEFT);
+				oled_ssd1306->drawString(0, 16, display_lines[0]);
+				oled_ssd1306->drawString(0, 28, display_lines[1]);
+				oled_ssd1306->drawString(0, 40, display_lines[2]);
+				oled_ssd1306->setTextAlignment(TEXT_ALIGN_CENTER);
+				oled_ssd1306->drawString(64, 52, displayGenerateFooter(screen_count));
+				oled_ssd1306->display();
+			}
 	}
 
 	// ----5----0----5----0
@@ -2947,8 +2962,10 @@ static void display_values()
  *****************************************************************/
 static void init_display()
 {
-	if (cfg::has_display && cfg::has_ssd1306)
-	{
+	//if (cfg::has_display && cfg::has_ssd1306)
+		if (cfg::has_ssd1306)
+
+		{
 
 #if defined(ARDUINO_TTGO_LoRa32_v21new)
 		oled_ssd1306 = new SSD1306Wire(0x3c, I2C_PIN_SDA, I2C_PIN_SCL);
@@ -2959,9 +2976,7 @@ static void init_display()
 #endif
 		
 		oled_ssd1306->init();
-
-		oled_ssd1306->flipScreenVertically();
-
+		oled_ssd1306->flipScreenVertically(); //ENLEVER ???
 		oled_ssd1306->clear();
 		oled_ssd1306->displayOn();
 		oled_ssd1306->setTextAlignment(TEXT_ALIGN_CENTER);
@@ -3181,9 +3196,11 @@ static void logEnabledAPIs()
 
 static void logEnabledDisplays()
 {
-	if (cfg::has_display || cfg::has_ssd1306)
-	{
-		debug_outln_info(F("Show on OLED..."));
+	//if (cfg::has_display || cfg::has_ssd1306)
+	if (cfg::has_ssd1306)
+
+		{
+			debug_outln_info(F("Show on OLED..."));
 	}
 }
 
@@ -3281,13 +3298,22 @@ static osjob_t sendjob;
 // cycle limitations).
 //const unsigned TX_INTERVAL = 60; // Replaced with cfg::time_send
 
+//For Generic ESP32 with Generic Lora 
+#if not defined(ARDUINO_TTGO_LoRa32_v21new) and not defined(ARDUINO_TTGO_LoRa32_v21new)
+// Pin mapping
+const lmic_pinmap lmic_pins = {
+	.nss = 15,
+	.rxtx = LMIC_UNUSED_PIN,
+	.rst = LMIC_UNUSED_PIN,
+	.dio = {4, 5, LMIC_UNUSED_PIN},
+};
+#endif
 
-
- void ToByteArray()
- {
-	 String appeui_str = cfg::appeui;
-	 String deveui_str = cfg::deveui;
-	 String appkey_str = cfg::appkey;
+void ToByteArray()
+{
+	String appeui_str = cfg::appeui;
+	String deveui_str = cfg::deveui;
+	String appkey_str = cfg::appkey;
 	//  Debug.println(appeui_str);
 	//  Debug.println(deveui_str);
 	//  Debug.println(appkey_str);
@@ -3631,6 +3657,10 @@ void setup(void)
 
 	init_config();
 
+#if not defined(ARDUINO_TTGO_LoRa32_v21new) and not defined(ARDUINO_TTGO_LoRa32_v21new)
+	Wire.begin(I2C_PIN_SDA, I2C_PIN_SCL);
+#endif
+
 #if defined(ARDUINO_TTGO_LoRa32_v21new)
 	Wire.begin(I2C_PIN_SDA, I2C_PIN_SCL);
 #endif
@@ -3663,7 +3693,7 @@ void setup(void)
 
 	if (cfg::npm_read)
 	{
-		serialNPM.begin(115200, SERIAL_8E1, PM_SERIAL_RX, PM_SERIAL_TX); //ENLEVE NPM_SERIAL_TX...
+		serialNPM.begin(115200, SERIAL_8E1, PM_SERIAL_RX, PM_SERIAL_TX); 
 		Debug.println("Read Next PM... serialNPM 115200 8E1");
 		serialNPM.setTimeout(400);
 	}
@@ -3720,21 +3750,26 @@ void setup(void)
 
 // always start the Webserver on void setup to get access to the sensor
 
+
+if(cfg::has_wifi){
 	setupNetworkTime();
-	connectWifi();
-	setup_webserver();
-	createLoggerConfigs();
-	logEnabledAPIs();
-	powerOnTestSensors();
-	logEnabledDisplays();
+}
 
-	delay(50);
+connectWifi();
+setup_webserver();
+createLoggerConfigs();
+logEnabledAPIs();
+powerOnTestSensors();
+logEnabledDisplays();
 
-	starttime = millis(); // store the start time
-	last_update_attempt = time_point_device_start_ms = starttime;
-	if (cfg::npm_read)
-	{
-		last_display_millis = starttime;
+delay(50);
+
+starttime = millis(); // store the start time
+last_update_attempt = time_point_device_start_ms = starttime;
+
+if (cfg::npm_read)
+{
+	last_display_millis = starttime;
 	}
 	else
 	{
@@ -3816,14 +3851,19 @@ void loop(void)
 	act_micro = micros();
 	act_milli = millis();
 	send_now = msSince(starttime) > cfg::sending_intervall_ms;
+	
 	// Wait at least 30s for each NTP server to sync
 
-	if (!sntp_time_set && send_now &&
-		msSince(time_point_device_start_ms) < 1000 * 2 * 30 + 5000)
+	// ATTENTION SNTP SI LORA
+
+	if (cfg::has_wifi)
 	{
-		debug_outln_info(F("NTP sync not finished yet, skipping send"));
-		send_now = false;
-		starttime = act_milli;
+		if (!sntp_time_set && send_now && msSince(time_point_device_start_ms) < 1000 * 2 * 30 + 5000)
+		{
+			debug_outln_info(F("NTP sync not finished yet, skipping send"));
+			send_now = false;
+			starttime = act_milli;
+		}
 	}
 
 	sample_count++;
@@ -3866,11 +3906,12 @@ void loop(void)
 		}
 	}
 
-	if ((msSince(last_display_millis) > DISPLAY_UPDATE_INTERVAL_MS) &&
-		(cfg::has_display && cfg::has_ssd1306 ))
-	{
-		display_values();
-		last_display_millis = act_milli;
+	//if ((msSince(last_display_millis) > DISPLAY_UPDATE_INTERVAL_MS) && (cfg::has_display && cfg::has_ssd1306 ))
+		if ((msSince(last_display_millis) > DISPLAY_UPDATE_INTERVAL_MS) && (cfg::has_ssd1306))
+
+		{
+			display_values();
+			last_display_millis = act_milli;
 	}
 
 	server.handleClient();
@@ -3965,10 +4006,12 @@ void loop(void)
 		starttime = millis(); // store the start time
 		count_sends++;
 	}
+	
 	if(cfg::has_lora){
 		prepareTxFrame();
 		os_runloop_once();
 
+	// POUR VERIF:
 		// void os_runloop_once()
 		// {
 		// 	osjob_t *j = NULL;

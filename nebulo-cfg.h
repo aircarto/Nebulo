@@ -49,10 +49,9 @@ enum ConfigShapeId {
 	Config_send2madavi,
 	Config_ssl_madavi,
 	Config_send2csv,
-	Config_has_display,
 	Config_has_ssd1306,
-	Config_has_flipped_display,
 	Config_display_wifi_info,
+	Config_display_lora_info,
 	Config_display_device_info,
 	Config_debug,
 	Config_sending_intervall_ms,
@@ -95,10 +94,9 @@ static constexpr char CFG_KEY_SSL_DUSTI[] PROGMEM = "ssl_dusti";
 static constexpr char CFG_KEY_SEND2MADAVI[] PROGMEM = "send2madavi";
 static constexpr char CFG_KEY_SSL_MADAVI[] PROGMEM = "ssl_madavi";
 static constexpr char CFG_KEY_SEND2CSV[] PROGMEM = "send2csv";
-static constexpr char CFG_KEY_HAS_DISPLAY[] PROGMEM = "has_display";
 static constexpr char CFG_KEY_HAS_SSD1306[] PROGMEM = "has_ssd1306";
-static constexpr char CFG_KEY_HAS_FLIPPED_DISPLAY[] PROGMEM = "has_flipped_display";
 static constexpr char CFG_KEY_DISPLAY_WIFI_INFO[] PROGMEM = "display_wifi_info";
+static constexpr char CFG_KEY_DISPLAY_LORA_INFO[] PROGMEM = "display_lora_info";
 static constexpr char CFG_KEY_DISPLAY_DEVICE_INFO[] PROGMEM = "display_device_info";
 static constexpr char CFG_KEY_DEBUG[] PROGMEM = "debug";
 static constexpr char CFG_KEY_SENDING_INTERVALL_MS[] PROGMEM = "sending_intervall_ms";
@@ -141,10 +139,9 @@ static constexpr ConfigShapeEntry configShape[] PROGMEM = {
 	{ Config_Type_Bool, 0, CFG_KEY_SEND2MADAVI, &cfg::send2madavi },
 	{ Config_Type_Bool, 0, CFG_KEY_SSL_MADAVI, &cfg::ssl_madavi },
 	{ Config_Type_Bool, 0, CFG_KEY_SEND2CSV, &cfg::send2csv },
-	{ Config_Type_Bool, 0, CFG_KEY_HAS_DISPLAY, &cfg::has_display },
 	{ Config_Type_Bool, 0, CFG_KEY_HAS_SSD1306, &cfg::has_ssd1306 },
-	{ Config_Type_Bool, 0, CFG_KEY_HAS_FLIPPED_DISPLAY, &cfg::has_flipped_display },
 	{ Config_Type_Bool, 0, CFG_KEY_DISPLAY_WIFI_INFO, &cfg::display_wifi_info },
+	{ Config_Type_Bool, 0, CFG_KEY_DISPLAY_LORA_INFO, &cfg::display_lora_info },
 	{ Config_Type_Bool, 0, CFG_KEY_DISPLAY_DEVICE_INFO, &cfg::display_device_info },
 	{ Config_Type_UInt, 0, CFG_KEY_DEBUG, &cfg::debug },
 	{ Config_Type_Time, 0, CFG_KEY_SENDING_INTERVALL_MS, &cfg::sending_intervall_ms },

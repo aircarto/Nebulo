@@ -24,10 +24,9 @@ Bool		ssl_dusti
 Bool		send2madavi
 Bool		ssl_madavi
 Bool		send2csv
-Bool		has_display
 Bool		has_ssd1306
-Bool		has_flipped_display
 Bool		display_wifi_info
+Bool		display_lora_info
 Bool		display_device_info
 UInt		debug
 Time		sending_intervall_ms

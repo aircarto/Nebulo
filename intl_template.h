@@ -1,4 +1,4 @@
-#define INTL_LANG "";
+#define INTL_LANG ""
 #define INTL_PM_SENSOR ""
 const char INTL_CONFIGURATION[] PROGMEM = "";
 #define INTL_WIFI_SETTINGS ""
@@ -10,22 +10,21 @@ const char INTL_AB_HIER_NUR_ANDERN[] PROGMEM = "";
 const char INTL_SAVE[] PROGMEM = "";
 const char INTL_SENSORS[] PROGMEM = "";
 const char INTL_MORE_SENSORS[] PROGMEM = "";
-const char INTL_SDS011[] PROGMEM = "SDS011 ({pm})";
-const char INTL_NPM[] PROGMEM = "Tera Sensor Next PM ({pm})";
-const char INTL_BMX280[] PROGMEM = "BME280 ({t}, {h}, {p}), BMP280 ({t}, {p})";
+const char INTL_SDS011[] PROGMEM = "";
+const char INTL_NPM[] PROGMEM = "";
+const char INTL_BMX280[] PROGMEM = "";
 const char INTL_HEIGHT_ABOVE_SEALEVEL[] PROGMEM = "";
 const char INTL_PRESSURE_AT_SEALEVEL[] PROGMEM = "";
-const char INTL_NEO6M[] PROGMEM = "GPS (NEO 6M)";
+const char INTL_NEO6M[] PROGMEM = "";
 const char INTL_BASICAUTH[] PROGMEM = "";
 #define INTL_REPORT_ISSUE ""
 const char INTL_FS_WIFI_DESCRIPTION[] PROGMEM = "";
 const char INTL_FS_WIFI_NAME[] PROGMEM = "";
 const char INTL_LORA_SETTINGS[] PROGMEM = "";
 const char INTL_MORE_SETTINGS[] PROGMEM = "";
-const char INTL_DISPLAY[] PROGMEM = "OLED SSD1306";
-const char INTL_SH1106[] PROGMEM = "OLED SH1106";
-const char INTL_FLIP_DISPLAY[] PROGMEM = "OLED Display Flip";
+const char INTL_SSD1306[] PROGMEM = "";
 const char INTL_DISPLAY_WIFI_INFO[] PROGMEM = "";
+const char INTL_DISPLAY_LORA_INFO[] PROGMEM = "";
 const char INTL_DISPLAY_DEVICE_INFO[] PROGMEM = "";
 const char INTL_DEBUG_LEVEL[] PROGMEM = "";
 const char INTL_MEASUREMENT_INTERVAL[] PROGMEM = "";

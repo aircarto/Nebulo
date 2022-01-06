@@ -3,21 +3,12 @@
 
 #include <WString.h>
 
-#if defined(ESP8266)
-#include <Hash.h>
-#include <coredecls.h>
-#include <ESP8266WiFi.h>
-#include <SoftwareSerial.h>
-#endif
-
-#if defined(ESP32)
 #include <WiFi.h>
 #include <WiFiClient.h>
 #include <WiFiClientSecure.h>
 #include <HardwareSerial.h>
 #include <hwcrypto/sha.h>
 #include <freertos/queue.h>
-#endif
 
 constexpr unsigned SMALL_STR = 64-1;
 constexpr unsigned MED_STR = 256-1;
@@ -47,11 +38,6 @@ extern String delayToString(unsigned time_ms);
 extern String check_display_value(double value, double undef, uint8_t len, uint8_t str_len);
 extern void add_Value2Json(String& res, const __FlashStringHelper* type, const String& value);
 extern void add_Value2Json(String& res, const __FlashStringHelper* type, const __FlashStringHelper* debug_type, const float& value);
-
-#if defined(ESP8266)
-extern void configureCACertTrustAnchor(WiFiClientSecure* client);
-extern bool launchUpdateLoader(const String& md5);
-#endif
 
 extern float readCorrectionOffset(const char* correction);
 
@@ -90,12 +76,7 @@ public:
 	String popLines();
 
 private:
-#if defined(ESP8266)
-	std::unique_ptr<circular_queue<uint8_t> > m_buffer;
-#endif
-#if defined(ESP32)
 	QueueHandle_t m_buffer;
-#endif
 };
 
 extern class LoggingSerial Debug;

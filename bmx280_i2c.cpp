@@ -84,7 +84,7 @@ bool BMX280::begin(uint8_t addr) {
 #endif
 
 #if defined(ARDUINO_HELTEC_WIFI_LORA_32_V2)
-  _wire = &Wire1;
+  _wire = &Wire1; // Maybe use same pins as screen
 #endif
   return init();
 }
