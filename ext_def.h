@@ -110,7 +110,7 @@ static const char URL_CUSTOM2[] PROGMEM = "/data.php";
 // PIN_SX1276_ANT_SWITCH_TX_RFO = UNUSED_PIN,
 // PIN_VDD_BOOST_ENABLE = UNUSED_PIN,
 
-#if not defined(ARDUINO_TTGO_LoRa32_v21new) and not defined(ARDUINO_TTGO_LoRa32_v21new)
+#if defined(ESP32) and not defined(ARDUINO_HELTEC_WIFI_LORA_32_V2) and not defined(ARDUINO_TTGO_LoRa32_v21new)
 //#define ONEWIRE_PIN D25
 #define PM_SERIAL_RX D19
 #define PM_SERIAL_TX D23

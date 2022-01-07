@@ -79,6 +79,10 @@ enum {
 bool BMX280::begin(uint8_t addr) {
   _i2caddr = addr;
 
+#if defined(ESP32) and not defined(ARDUINO_HELTEC_WIFI_LORA_32_V2) and not defined(ARDUINO_TTGO_LoRa32_v21new)
+  _wire = &Wire;
+#endif
+
 #if defined(ARDUINO_TTGO_LoRa32_v21new)
   _wire = &Wire;
 #endif

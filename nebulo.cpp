@@ -2327,7 +2327,7 @@ static void fetchSensorSDS(String &s)
 static void fetchSensorNPM(String &s)
 {
 
-	debug_outln_verbose(FPSTR(DBG_TXT_START_READING), FPSTR(SENSORS_NPM));
+	//debug_outln_verbose(FPSTR(DBG_TXT_START_READING), FPSTR(SENSORS_NPM));
 
 	if (cfg::sending_intervall_ms > (WARMUPTIME_NPM_MS + READINGTIME_NPM_MS) && msSince(starttime) < (cfg::sending_intervall_ms - (WARMUPTIME_NPM_MS + READINGTIME_NPM_MS)))
 	{
@@ -2665,7 +2665,7 @@ static void fetchSensorNPM(String &s)
 		}
 	}
 
-	debug_outln_verbose(FPSTR(DBG_TXT_END_READING), FPSTR(SENSORS_NPM));
+	//debug_outln_verbose(FPSTR(DBG_TXT_END_READING), FPSTR(SENSORS_NPM));
 }
 
 
@@ -3298,8 +3298,8 @@ static osjob_t sendjob;
 // cycle limitations).
 //const unsigned TX_INTERVAL = 60; // Replaced with cfg::time_send
 
-//For Generic ESP32 with Generic Lora 
-#if not defined(ARDUINO_TTGO_LoRa32_v21new) and not defined(ARDUINO_TTGO_LoRa32_v21new)
+//For Generic ESP32 with Generic Lora
+#if defined(ESP32) and not defined(ARDUINO_HELTEC_WIFI_LORA_32_V2) and not defined(ARDUINO_TTGO_LoRa32_v21new)
 // Pin mapping
 const lmic_pinmap lmic_pins = {
 	.nss = 15,

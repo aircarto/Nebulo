@@ -66,7 +66,7 @@ constexpr const unsigned long DURATION_BEFORE_FORCED_RESTART_MS = ONE_DAY_IN_MS 
 // see https://randomnerdtutorials.com/esp32-pinout-reference-gpios/
 //     https://github.com/va3wam/TWIPi/blob/master/Eagle/doc/feather-pinout-map.pdf
 
-#if not defined(ARDUINO_TTGO_LoRa32_v21new) and not defined(ARDUINO_TTGO_LoRa32_v21new)
+#if defined(ESP32) and not defined(ARDUINO_HELTEC_WIFI_LORA_32_V2) and not defined(ARDUINO_TTGO_LoRa32_v21new)
 #define D0 0
 #define D1 1
 #define D2 2
