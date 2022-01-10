@@ -7,10 +7,10 @@
 
 //#include "ca-root.h"
 
-
 /*****************************************************************
  * aircms.online helper functions                                *
  *****************************************************************/
+
 String sha1Hex(const String& s) {
 	char sha1sum_output[20];
 	esp_sha(SHA1, (const unsigned char*) s.c_str(), s.length(), (unsigned char*)sha1sum_output);
@@ -321,6 +321,7 @@ bool SDS_cmd(PmSensorCmd cmd) {
 /*********************************************************************************
  * send Tera Sensor Next PM sensor command state, change, concentration, version *
  *********************************************************************************/
+
 bool NPM_checksum_valid_4(const uint8_t (&data)[4]) {
 	uint8_t sum = data[0] + data[1] + data[2] + data[3];
 	uint8_t checksum = sum % 0x100;
@@ -357,6 +358,13 @@ void NPM_cmd(PmSensorCmd2 cmd) {
 		0x81, 0x17, 0x68 
 	};
 
+	static constexpr uint8_t speed_cmd[] PROGMEM = {
+		0x81, 0x21, 0x00, 0x5E //0% to get current value
+		//0x81, 0x21, 0x32, 0x2C //50% 
+	};
+
+//0x81 + 0x21 + 0x55 + 0x09 = 0x100
+
 	constexpr uint8_t cmd_len = array_num_elements(change_cmd);
 	uint8_t buf[cmd_len];
 
@@ -373,6 +381,9 @@ void NPM_cmd(PmSensorCmd2 cmd) {
 	case PmSensorCmd2::Version:
 		memcpy_P(buf, version_cmd, cmd_len);
 		break;
+	case PmSensorCmd2::Speed:
+		memcpy_P(buf, speed_cmd, cmd_len);
+		break;
 	}
 	serialNPM.write(buf, cmd_len);
 }
@@ -381,40 +392,42 @@ void NPM_cmd(PmSensorCmd2 cmd) {
  * Helpers                                                       *
  *****************************************************************/
 
+
 void NPM_data_reader(uint8_t data[], size_t size)
-{
-	String reader = "Read: ";
-	for (size_t i = 0; i < size; i++)
 	{
-		reader += "0x";
-		if (data[i] < 0x10)
+		String reader = "Read: ";
+		for (size_t i = 0; i < size; i++)
 		{
-			reader += "0";
+			reader += "0x";
+			if (data[i] < 0x10)
+			{
+				reader += "0";
+			}
+			reader += String(data[i], HEX);
+			if (i != (size - 1))
+			{
+				reader += ", ";
+			}
 		}
-		reader += String(data[i], HEX);
-		if (i != (size - 1))
-		{
-			reader += ", ";
-		}
+		debug_outln(reader, DEBUG_MAX_INFO);
 	}
-	debug_outln(reader, DEBUG_MAX_INFO);
-}
 
-void NPM_state(uint8_t bytedata)
-{
-	String state = "State: ";
-
-	for (int b = 7; b >= 0; b--)
+	void NPM_state(uint8_t bytedata)
 	{
-		state += String(bitRead(bytedata, b));
-	}
-	debug_outln(state, DEBUG_MAX_INFO);
-	
-}
+		String state = "State: ";
 
-const __FlashStringHelper* loggerDescription(unsigned i) {
-    const __FlashStringHelper* logger = nullptr;
-    switch (i) {
+		for (int b = 7; b >= 0; b--)
+		{
+			state += String(bitRead(bytedata, b));
+		}
+		debug_outln(state, DEBUG_MAX_INFO);
+	}
+
+	const __FlashStringHelper *loggerDescription(unsigned i)
+	{
+		const __FlashStringHelper *logger = nullptr;
+		switch (i)
+		{
         case LoggerSensorCommunity:
             logger = F("Sensor.Community");
             break;

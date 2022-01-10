@@ -95,7 +95,7 @@ namespace cfg
 	bool has_ssd1306 = HAS_SSD1306;
 
 	bool display_wifi_info = DISPLAY_WIFI_INFO;
-	bool display_lora_info = DISPLAY_LORA_INFO; 
+	bool display_lora_info = DISPLAY_LORA_INFO;
 	bool display_device_info = DISPLAY_DEVICE_INFO;
 
 	// API settings
@@ -118,7 +118,7 @@ namespace cfg
 	char user_custom2[LEN_USER_CUSTOM2] = USER_CUSTOM2;
 	char pwd_custom2[LEN_CFG_PASSWORD] = PWD_CUSTOM2;
 
-    //First load
+	//First load
 	void initNonTrivials(const char *id)
 	{
 		strcpy(cfg::current_lang, CURRENT_LANG);
@@ -143,7 +143,7 @@ namespace cfg
 }
 
 // define size of the config JSON
-#define JSON_BUFFER_SIZE 2300  //REVOIR LA TAILLE
+#define JSON_BUFFER_SIZE 2300 //REVOIR LA TAILLE
 
 LoggerConfig loggerConfigs[LoggerCount];
 
@@ -169,8 +169,8 @@ SSD1306Wire *oled_ssd1306 = nullptr; //as pointer
  *****************************************************************/
 
 #define serialSDS (Serial1)
-#define serialGPS (&(Serial2))  //as pointer
-#define serialNPM (Serial1) 
+#define serialGPS (&(Serial2)) //as pointer
+#define serialNPM (Serial1)
 
 /*****************************************************************
  * BMP/BME280 declaration                                        *
@@ -196,7 +196,11 @@ unsigned long last_micro = 0;
 unsigned long min_micro = 1000000000;
 unsigned long max_micro = 0;
 
-bool is_SDS_running = true;
+//bool is_SDS_running = true;
+bool is_SDS_running;
+
+// To read SDS responses
+
 enum
 {
 	SDS_REPLY_HDR = 10,
@@ -204,6 +208,38 @@ enum
 } SDS_waiting_for;
 
 bool is_NPM_running;
+
+// To read NPM responses
+enum
+{
+	NPM_REPLY_HEADER_16 = 16,
+	NPM_REPLY_STATE_16 = 14,
+	NPM_REPLY_BODY_16 = 13,
+	NPM_REPLY_CHECKSUM_16 = 1
+} NPM_waiting_for_16;  //for concentration
+
+enum
+{
+	NPM_REPLY_HEADER_4 = 4,
+	NPM_REPLY_STATE_4 = 2,
+	NPM_REPLY_CHECKSUM_4 = 1
+} NPM_waiting_for_4; //for change
+
+enum
+{
+	NPM_REPLY_HEADER_5 = 5,
+	NPM_REPLY_STATE_5 = 3,
+	NPM_REPLY_DATA_5 = 2,
+	NPM_REPLY_CHECKSUM_5 = 1
+} NPM_waiting_for_5; //for fan speed
+
+enum
+{
+	NPM_REPLY_HEADER_6 = 6,
+	NPM_REPLY_STATE_6 = 4,
+	NPM_REPLY_DATA_6 = 3,
+	NPM_REPLY_CHECKSUM_6 = 1
+} NPM_waiting_for_6; // for version
 
 unsigned long sending_time = 0;
 unsigned long last_update_attempt;
@@ -243,7 +279,6 @@ uint16_t npm_pm10_min_pcs = 60000;
 uint16_t npm_pm25_max_pcs = 0;
 uint16_t npm_pm25_min_pcs = 60000;
 bool newCmdNPM = true;
-
 
 float last_value_SDS_P1 = -1.0;
 float last_value_SDS_P2 = -1.0;
@@ -328,7 +363,6 @@ static void display_debug(const String &text1, const String &text2)
 		oled_ssd1306->drawString(0, 24, text2);
 		oled_ssd1306->display();
 	}
-
 }
 
 /*****************************************************************
@@ -375,8 +409,6 @@ static String NPM_version_date()
 	{
 		debug_outln_verbose(FPSTR(DBG_TXT_START_READING), FPSTR(DBG_TXT_NPM_VERSION_DATE));
 		delay(250);
-		//serialNPM.flush();
-		const uint8_t constexpr answer_sleep[4] = {0x81, 0x16, 0x01, 0x68};
 		uint8_t data[6];
 		debug_outln_info(F("Version NPM..."));
 		NPM_cmd(PmSensorCmd2::Version);
@@ -595,8 +627,7 @@ static void init_config()
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 
-bool spiffs_begin_ok = SPIFFS.begin(FORMAT_SPIFFS_IF_FAILED);
-
+	bool spiffs_begin_ok = SPIFFS.begin(FORMAT_SPIFFS_IF_FAILED);
 
 #pragma GCC diagnostic pop
 
@@ -732,14 +763,14 @@ static void add_form_input(String &page_content, const ConfigShapeId cfgid, cons
 		s.replace("{t}", F("number"));
 		break;
 	case Config_Type_Password:
-			s.replace("{t}", F("password"));
-			info = FPSTR(INTL_PASSWORD);
+		s.replace("{t}", F("password"));
+		info = FPSTR(INTL_PASSWORD);
 	case Config_Type_Hex:
 		s.replace("{t}", F("hex"));
 	default:
-			t_value = c.cfg_val.as_str;
-			t_value.replace("'", "&#39;");
-			s.replace("{t}", F("text"));
+		t_value = c.cfg_val.as_str;
+		t_value.replace("'", "&#39;");
+		s.replace("{t}", F("text"));
 	}
 	s.replace("{i}", info);
 	s.replace("{n}", String(c.cfg_key()));
@@ -915,10 +946,10 @@ static void webserver_config_send_body_get(String &page_content)
 					  "<label class='tab' id='tab4' for='r4'>");
 	page_content += FPSTR(INTL_SENSORS);
 	page_content += F(
-					 "</label>"
-				     "<label class='tab' id='tab5' for='r5'>APIs"
-					  "</label></div><div class='panels'>"
-					  "<div class='panel' id='panel1'>");
+		"</label>"
+		"<label class='tab' id='tab5' for='r5'>APIs"
+		"</label></div><div class='panels'>"
+		"<div class='panel' id='panel1'>");
 
 	if (wificonfig_loop)
 	{ // scan for wlan ssids
@@ -967,7 +998,7 @@ static void webserver_config_send_body_get(String &page_content)
 	page_content += FPSTR(WEB_LF_B);
 	page_content += FPSTR(INTL_LORA_EXPLANATION);
 	page_content += FPSTR(WEB_B_BR_BR);
-	add_form_checkbox(Config_has_lora, FPSTR(INTL_LORA_ACTIVATION)); 
+	add_form_checkbox(Config_has_lora, FPSTR(INTL_LORA_ACTIVATION));
 	page_content += FPSTR(TABLE_TAG_OPEN);
 	add_form_input(page_content, Config_appeui, FPSTR("APPEUI"), LEN_APPEUI - 1);
 	add_form_input(page_content, Config_deveui, FPSTR("DEVEUI"), LEN_DEVEUI - 1);
@@ -1207,8 +1238,6 @@ static void webserver_config()
 		}
 	}
 }
-
-
 
 /*****************************************************************
  * Webserver wifi: show available wifi networks                  *
@@ -1793,7 +1822,6 @@ static void webserver_static()
 	}
 }
 
-
 /*****************************************************************
  * Webserver setup                                               *
  *****************************************************************/
@@ -1923,41 +1951,41 @@ static void wifiConfig()
 	wifi.nchan = 13;
 	wifi.schan = 1;
 
-//The station mode starts only if WiFi communication is enabled.
+	//The station mode starts only if WiFi communication is enabled.
 
-if(cfg::has_wifi){
+	if (cfg::has_wifi)
+	{
 
-	WiFi.mode(WIFI_STA);
+		WiFi.mode(WIFI_STA);
 
-	dnsServer.stop();
-	delay(100);
+		dnsServer.stop();
+		delay(100);
 
-	debug_outln_info(FPSTR(DBG_TXT_CONNECTING_TO), cfg::wlanssid);
+		debug_outln_info(FPSTR(DBG_TXT_CONNECTING_TO), cfg::wlanssid);
 
-	WiFi.begin(cfg::wlanssid, cfg::wlanpwd);
-
-}
-debug_outln_info(F("---- Result Webconfig ----"));
-debug_outln_info(F("WiFi: "), cfg::has_wifi);
-debug_outln_info(F("LoRa: "), cfg::has_lora);
-debug_outln_info(F("APPEUI: "), cfg::appeui);
-debug_outln_info(F("DEVEUI: "), cfg::deveui);
-debug_outln_info(F("APPKEY: "), cfg::appkey);
-debug_outln_info(F("WLANSSID: "), cfg::wlanssid);
-debug_outln_info(FPSTR(DBG_TXT_SEP));
-debug_outln_info_bool(F("SDS: "), cfg::sds_read);
-debug_outln_info_bool(F("NPM: "), cfg::npm_read);
-debug_outln_info(FPSTR(DBG_TXT_SEP));
-debug_outln_info_bool(F("SensorCommunity: "), cfg::send2dusti);
-debug_outln_info_bool(F("Madavi: "), cfg::send2madavi);
-debug_outln_info_bool(F("CSV: "), cfg::send2csv);
-debug_outln_info_bool(F("AirCarto: "), cfg::send2custom);
-debug_outln_info_bool(F("AtmoSud: "), cfg::send2custom2);
-debug_outln_info(FPSTR(DBG_TXT_SEP));
-//debug_outln_info_bool(F("Display: "), cfg::has_display);
-debug_outln_info_bool(F("Display: "), cfg::has_ssd1306);
-debug_outln_info(F("Debug: "), String(cfg::debug));
-wificonfig_loop = false; //VOIR ICI
+		WiFi.begin(cfg::wlanssid, cfg::wlanpwd);
+	}
+	debug_outln_info(F("---- Result Webconfig ----"));
+	debug_outln_info(F("WiFi: "), cfg::has_wifi);
+	debug_outln_info(F("LoRa: "), cfg::has_lora);
+	debug_outln_info(F("APPEUI: "), cfg::appeui);
+	debug_outln_info(F("DEVEUI: "), cfg::deveui);
+	debug_outln_info(F("APPKEY: "), cfg::appkey);
+	debug_outln_info(F("WLANSSID: "), cfg::wlanssid);
+	debug_outln_info(FPSTR(DBG_TXT_SEP));
+	debug_outln_info_bool(F("SDS: "), cfg::sds_read);
+	debug_outln_info_bool(F("NPM: "), cfg::npm_read);
+	debug_outln_info(FPSTR(DBG_TXT_SEP));
+	debug_outln_info_bool(F("SensorCommunity: "), cfg::send2dusti);
+	debug_outln_info_bool(F("Madavi: "), cfg::send2madavi);
+	debug_outln_info_bool(F("CSV: "), cfg::send2csv);
+	debug_outln_info_bool(F("AirCarto: "), cfg::send2custom);
+	debug_outln_info_bool(F("AtmoSud: "), cfg::send2custom2);
+	debug_outln_info(FPSTR(DBG_TXT_SEP));
+	//debug_outln_info_bool(F("Display: "), cfg::has_display);
+	debug_outln_info_bool(F("Display: "), cfg::has_ssd1306);
+	debug_outln_info(F("Debug: "), String(cfg::debug));
+	wificonfig_loop = false; //VOIR ICI
 }
 
 static void waitForWifiToConnect(int maxRetries)
@@ -2328,46 +2356,55 @@ static void fetchSensorNPM(String &s)
 {
 
 	//debug_outln_verbose(FPSTR(DBG_TXT_START_READING), FPSTR(SENSORS_NPM));
-
 	if (cfg::sending_intervall_ms > (WARMUPTIME_NPM_MS + READINGTIME_NPM_MS) && msSince(starttime) < (cfg::sending_intervall_ms - (WARMUPTIME_NPM_MS + READINGTIME_NPM_MS)))
 	{
 		if (is_NPM_running)
 		{
-			const uint8_t constexpr answer_stop[4] = {0x81, 0x15, 0x01, 0x69};
 			uint8_t data[4];
 			debug_outln_info(F("Change NPM to stop..."));
 			NPM_cmd(PmSensorCmd2::Change);
+			NPM_waiting_for_4 = NPM_REPLY_CHECKSUM_4;
 
 			while (!serialNPM.available())
 			{
 				debug_outln("Wait for Serial...", DEBUG_MAX_INFO);
 			}
 
+
+
+
+
+
+
+			//________________________
 			while (serialNPM.available() > 0)
 			{
 				unsigned r = serialNPM.readBytes(data, sizeof(data));
 
 				if (r == sizeof(data) && NPM_checksum_valid_4(data))
 				{
-
 					NPM_data_reader(data, 4);
 					NPM_state(data[2]);
 
 					if (memcmp(data, answer_stop, 4) == 0)
 					{
 						debug_outln_info(F("Next PM Stop..."));
-						is_NPM_running = false;
 					}
+					else
+						{
+							debug_outln_info(F("Next PM Stop degraded state..."));
+						}
+					is_NPM_running = false;
 					break;
 				}
 			}
+			//________________________
 		}
 	}
 	else
 	{
 		if (!is_NPM_running)
 		{
-			const uint8_t constexpr answer_start[4] = {0x81, 0x15, 0x00, 0x6A};
 			uint8_t data[4];
 			debug_outln_info(F("Change NPM to start..."));
 			NPM_cmd(PmSensorCmd2::Change);
@@ -2382,7 +2419,6 @@ static void fetchSensorNPM(String &s)
 
 				if (r == sizeof(data) && NPM_checksum_valid_4(data))
 				{
-
 					NPM_data_reader(data, 4);
 					NPM_state(data[2]);
 
@@ -2390,16 +2426,12 @@ static void fetchSensorNPM(String &s)
 					{
 						debug_outln_info(F("Next PM Start..."));
 						is_NPM_running = true;
-						starttime_NPM = millis();
-						last_NPM = starttime_NPM - WARMUPTIME_NPM_MS - 1000;
-						break;
 					}
-
-					if (data[1] == 0x15 && data[2] != 0x00 && bitRead(data[2], 0) == 0)
+					//else if (data[0] == 0x81 && data[1] == 0x15 && data[2] != 0x00 && bitRead(data[2], 0) == 0)
+					else
 					{
-						const uint8_t constexpr answer_stop[4] = {0x81, 0x15, 0x01, 0x69};
+						debug_outln_info(F("Next PM start degraded state... Stop and new cycle..."));
 						uint8_t data[4];
-						debug_outln_info(F("Next PM problem... Stop and new cycle"));
 						NPM_cmd(PmSensorCmd2::Change);
 
 						while (!serialNPM.available())
@@ -2412,111 +2444,77 @@ static void fetchSensorNPM(String &s)
 
 							if (r == sizeof(data) && NPM_checksum_valid_4(data))
 							{
-
 								NPM_data_reader(data, 4);
+								NPM_state(data[2]);
 
 								if (memcmp(data, answer_stop, 4) == 0)
 								{
 									debug_outln_info(F("Next PM Stop..."));
-									is_NPM_running = false;
-									npm_val_count = 0;
 								}
+									else
+						{
+							debug_outln_info(F("Next PM Stop degraded state..."));
+						}
 								break;
 							}
 						}
 						is_NPM_running = false;
+						npm_val_count = 0;
 						starttime = millis(); // to force sendnow false
-						delay(5000);		  // wait 5s for the NextPM
-						break;
+						delay(15000);		  // wait 5s for the NextPM
+						debug_outln_info(F("Wait for 15 seconds..."));
 
-						// uint8_t data[4];
-						// debug_outln_info(F("Check state of Next PM..."));
-						// NPM_cmd(PmSensorCmd2::State);
-
-						// while (!serialNPM.available())
-						// {
-						// 	debug_outln("Wait for Serial...", DEBUG_MAX_INFO);
-						// }
-						// while (serialNPM.available() > 0)
-						// {
-
-						// 	unsigned r = serialNPM.readBytes(data, sizeof(data));
-
-						// 	if (r == sizeof(data) && NPM_checksum_valid_4(data))
-						// 	{
-						// 		NPM_data_reader(data, 4);
-
-						// 		switch (expression)
-						// 		{
-						// 		case constant - expression:
-						// 			statement(s);
-						// 			break; //optional
-						// 		case constant - expression:
-						// 			statement(s);
-						// 			break; //optional
-
-						// 		// you can have any number of case statements.
-						// 		default: //Optional
-						// 			statement(s);
-						// 		}
-
-						// 		//ATTENTION 0x15 REVOIR FAIRE SWITCH CASE
-
-						// 		if (data[1] == 0x16 && bitRead(data[2], 0) == 1)
-						// 		{
-						// 			debug_outln_info(F("Next PM is sleeping..."));
-						// 		}
-						// 		else if (data[1] == 0x16 && bitRead(data[2], 2) == 1)
-						// 		{
-						// 			debug_outln_info(F("Next PM not ready..."));
-						// 		}
-						// 		else if (data[1] == 0x16 && bitRead(data[2], 0) == 0)
-						// 		{
-						// 			debug_outln_info(F("Next PM has started..."));
-						// 		}
-						// 		else if (data[1] == 0x16 && bitRead(data[2], 0) == 0)
-						// 		{
-						// 			debug_outln_info(F("Next PM has started..."));
-						// 		}
-
-						// 		break;
-						// 	}
-						// }
-						
+						//break;
 					}
+					break;
 				}
 			}
+			NPM_waiting_for_16 = NPM_REPLY_HEADER_16;
 		}
-		else
+
+	//if (){}
+		if (msSince(starttime) > (cfg::sending_intervall_ms - READINGTIME_NPM_MS)){ //DIMINUER LE READING TIME
+
+		debug_outln_info(F("Concentration NPM..."));
+		NPM_cmd(PmSensorCmd2::Concentration);
+		while (!serialNPM.available())
 		{
+			debug_outln("Wait for Serial...", DEBUG_MAX_INFO);
+		}
 
-			if (msSince(starttime_NPM) > WARMUPTIME_NPM_MS && msSince(last_NPM) >= SAMPLETIME_NPM_MS && npm_val_count < 10)
+		while (serialNPM.available() >= NPM_waiting_for_16)
+		{
+			const uint8_t constexpr header[2] = {0x81, 0x11};
+			uint8_t state[1];
+			uint8_t data[12];
+			uint8_t checksum[1];
+			uint8_t test[16];
+
+			switch (NPM_waiting_for_16)
 			{
-
-				uint8_t data[16];
-				debug_outln_info(F("Concentration NPM...")); //REVOIR MAUVAISE REPONSE CONCENTRATION
-				NPM_cmd(PmSensorCmd2::Concentration);
-				while (!serialNPM.available())
+			case NPM_REPLY_HEADER_16:
+				if (serialNPM.find(header, sizeof(header)))
+					NPM_waiting_for_16 = NPM_REPLY_STATE_16;
+				break;
+			case NPM_REPLY_STATE_16:
+				serialNPM.readBytes(state, sizeof(state));
+				NPM_state(state[0]);
+				NPM_waiting_for_16 = NPM_REPLY_BODY_16;
+				break;
+			case NPM_REPLY_BODY_16:
+				if (serialNPM.readBytes(data, sizeof(data)) == sizeof(data))
 				{
-					debug_outln("Wait for Serial...", DEBUG_MAX_INFO);
-				}
-				while (serialNPM.available() > 0)
-				{
-					unsigned r = serialNPM.readBytes(data, sizeof(data));
+					NPM_data_reader(data, 12);
+					uint16_t N1_serial = word(data[0], data[1]);
+					uint16_t N25_serial = word(data[2], data[3]);
+					uint16_t N10_serial = word(data[4], data[5]);
 
-					if (r == sizeof(data) && NPM_checksum_valid_16(data))
-					{
+					uint16_t pm1_serial = word(data[6], data[7]);
+					uint16_t pm25_serial = word(data[8], data[9]);
+					uint16_t pm10_serial = word(data[10], data[11]);
 
-						NPM_data_reader(data, 16);
-						NPM_state(data[2]);
-
-						uint16_t N1_serial = word(data[3], data[4]);
-						uint16_t N25_serial = word(data[5], data[6]);
-						uint16_t N10_serial = word(data[7], data[8]);
-
-						uint16_t pm1_serial = word(data[9], data[10]);
-						uint16_t pm25_serial = word(data[11], data[12]);
-						uint16_t pm10_serial = word(data[13], data[14]);
+					//if (msSince(starttime) > (cfg::sending_intervall_ms - READINGTIME_NPM_MS)){
+					
 
 						debug_outln_verbose(F("PM1 (μg/m3) : "), String(pm1_serial / 10.0f));
 						debug_outln_verbose(F("PM2.5 (μg/m3): "), String(pm25_serial / 10.0f));
@@ -2545,21 +2543,26 @@ static void fetchSensorNPM(String &s)
 						debug_outln_info(F("Next PM Measure..."));
 						npm_val_count++;
 						debug_outln(String(npm_val_count), DEBUG_MAX_INFO);
-						last_NPM = millis();
-
-						break;
-					}
-					else if (r == 4 && data[1] == 0x16)
-					{
-						NPM_data_reader(data, 4);
-						NPM_state(data[2]);
-						debug_outln_info(F("Next PM not ready yet..."));
-						break;
-					}
+					//}
 				}
+				NPM_waiting_for_16 = NPM_REPLY_CHECKSUM_16;
+				break;
+			case NPM_REPLY_CHECKSUM_16:
+				serialNPM.readBytes(checksum, sizeof(checksum));
+				memcpy(test, header, sizeof(header));
+				memcpy(&test[sizeof(header)], state, sizeof(state));
+				memcpy(&test[sizeof(header) + sizeof(state)], data, sizeof(data));
+				memcpy(&test[sizeof(header) + sizeof(state) + sizeof(data)], checksum, sizeof(checksum));
+				NPM_data_reader(test, 16);
+				if (NPM_checksum_valid_16(test))
+					debug_outln_info(F("Checksum OK..."));
+				NPM_waiting_for_16 = NPM_REPLY_HEADER_16;
+				break;
 			}
 		}
 	}
+	}
+
 	if (send_now)
 	{
 		last_value_NPM_P0 = -1.0f;
@@ -2634,32 +2637,41 @@ static void fetchSensorNPM(String &s)
 
 		if (cfg::sending_intervall_ms > (WARMUPTIME_NPM_MS + READINGTIME_NPM_MS))
 		{
-
-			const uint8_t constexpr answer_stop[4] = {0x81, 0x15, 0x01, 0x69};
-			uint8_t data[4];
-			debug_outln_info(F("Change NPM to stop after measure..."));
-			NPM_cmd(PmSensorCmd2::Change);
-
-			while (!serialNPM.available())
+			if (is_NPM_running)
 			{
-				debug_outln("Wait for Serial...", DEBUG_MAX_INFO);
-			}
-			while (serialNPM.available() > 0)
-			{
-				unsigned r = serialNPM.readBytes(data, sizeof(data));
 
-				if (r == sizeof(data) && NPM_checksum_valid_4(data))
+				uint8_t data[4];
+				debug_outln_info(F("Change NPM to stop after measure..."));
+				NPM_cmd(PmSensorCmd2::Change);
+
+				while (!serialNPM.available())
 				{
+					debug_outln("Wait for Serial...", DEBUG_MAX_INFO);
+				}
+				while (serialNPM.available() > 0)
+				{
+					unsigned r = serialNPM.readBytes(data, sizeof(data));
 
-					NPM_data_reader(data, 4);
-
-					if (memcmp(data, answer_stop, 4) == 0)
+					if (r == sizeof(data) && NPM_checksum_valid_4(data))
 					{
-						debug_outln_info(F("Next PM Stop..."));
-						is_NPM_running = false;
-						npm_val_count = 0;
+
+						NPM_data_reader(data, 4);
+						NPM_state(data[2]);
+
+						if (memcmp(data, answer_stop, 4) == 0)
+						{
+							debug_outln_info(F("Next PM Stop..."));
+
+						}
+						else
+						{
+							debug_outln_info(F("Next PM Stop degraded state..."));
+
+						}
+							is_NPM_running = false;  //SORTIR DU WHILE
+							npm_val_count = 0;
+						break;
 					}
-					break;
 				}
 			}
 		}
@@ -2667,8 +2679,6 @@ static void fetchSensorNPM(String &s)
 
 	//debug_outln_verbose(FPSTR(DBG_TXT_END_READING), FPSTR(SENSORS_NPM));
 }
-
-
 
 /*****************************************************************
  * read GPS sensor values                                        *
@@ -2770,8 +2780,7 @@ static void display_values()
 	uint8_t screen_count = 0;
 	uint8_t screens[8];
 	int line_count = 0;
-	debug_outln_info(F("output values to display..."));
-
+	//debug_outln_info(F("output values to display..."));
 
 	if (cfg::npm_read)
 	{
@@ -2829,7 +2838,7 @@ static void display_values()
 	{
 		screens[screen_count++] = 4;
 	}
-	if (cfg::display_wifi_info && cfg::has_wifi) 
+	if (cfg::display_wifi_info && cfg::has_wifi)
 	{
 		screens[screen_count++] = 5; // Wifi info
 	}
@@ -2842,110 +2851,109 @@ static void display_values()
 		screens[screen_count++] = 7; // Lora info
 	}
 
-
 	// update size of "screens" when adding more screens!
 	//if (cfg::has_display)
 	if (cfg::has_ssd1306)
+	{
+		switch (screens[next_display_count % screen_count])
 		{
-			switch (screens[next_display_count % screen_count])
+		case 1:
+			display_header = FPSTR(SENSORS_SDS011);
+			display_lines[0] = std::move(tmpl(F("PM2.5: {v} µg/m³"), check_display_value(pm25_value, -1, 1, 6)));
+			display_lines[1] = std::move(tmpl(F("PM10: {v} µg/m³"), check_display_value(pm10_value, -1, 1, 6)));
+			display_lines[2] = emptyString;
+			break;
+		case 2:
+			display_header = FPSTR(SENSORS_NPM);
+			display_lines[0] = std::move(tmpl(F("PM1: {v} µg/m³"), check_display_value(pm01_value, -1, 1, 6)));
+			display_lines[1] = std::move(tmpl(F("PM2.5: {v} µg/m³"), check_display_value(pm25_value, -1, 1, 6)));
+			display_lines[2] = std::move(tmpl(F("PM10: {v} µg/m³"), check_display_value(pm10_value, -1, 1, 6)));
+			//display_lines[3] = "NC: " + check_display_value(nc010_value, -1, 0, 3) + " " + check_display_value(nc025_value, -1, 0, 3) + " " + check_display_value(nc100_value, -1, 0, 3);
+			break;
+		case 3:
+			display_header = t_sensor;
+			// if (h_sensor && t_sensor != h_sensor)
+			// {
+			// 	display_header += " / " + h_sensor;
+			// }
+			// if ((h_sensor && p_sensor && (h_sensor != p_sensor)) || (h_sensor == "" && p_sensor && (t_sensor != p_sensor)))
+			// {
+			// 	display_header += " / " + p_sensor;
+			// }
+			if (t_sensor != "")
 			{
-			case 1:
-				display_header = FPSTR(SENSORS_SDS011);
-				display_lines[0] = std::move(tmpl(F("PM2.5: {v} µg/m³"), check_display_value(pm25_value, -1, 1, 6)));
-				display_lines[1] = std::move(tmpl(F("PM10: {v} µg/m³"), check_display_value(pm10_value, -1, 1, 6)));
-				display_lines[2] = emptyString;
-				break;
-			case 2:
-				display_header = FPSTR(SENSORS_NPM);
-				display_lines[0] = std::move(tmpl(F("PM1: {v} µg/m³"), check_display_value(pm01_value, -1, 1, 6)));
-				display_lines[1] = std::move(tmpl(F("PM2.5: {v} µg/m³"), check_display_value(pm25_value, -1, 1, 6)));
-				display_lines[2] = std::move(tmpl(F("PM10: {v} µg/m³"), check_display_value(pm10_value, -1, 1, 6)));
-				//display_lines[3] = "NC: " + check_display_value(nc010_value, -1, 0, 3) + " " + check_display_value(nc025_value, -1, 0, 3) + " " + check_display_value(nc100_value, -1, 0, 3);
-				break;
-			case 3:
-				display_header = t_sensor;
-				// if (h_sensor && t_sensor != h_sensor)
-				// {
-				// 	display_header += " / " + h_sensor;
-				// }
-				// if ((h_sensor && p_sensor && (h_sensor != p_sensor)) || (h_sensor == "" && p_sensor && (t_sensor != p_sensor)))
-				// {
-				// 	display_header += " / " + p_sensor;
-				// }
-				if (t_sensor != "")
-				{
-					display_lines[line_count] = "Temp.: ";
-					display_lines[line_count] += check_display_value(t_value, -128, 1, 6);
-					display_lines[line_count++] += " °C";
-				}
-				if (h_sensor != "")
-				{
-					display_lines[line_count] = "Hum.:  ";
-					display_lines[line_count] += check_display_value(h_value, -1, 1, 6);
-					display_lines[line_count++] += " %";
-				}
-				if (p_sensor != "")
-				{
-					display_lines[line_count] = "Pres.: ";
-					display_lines[line_count] += check_display_value(p_value / 100, (-1 / 100.0), 1, 6);
-					display_lines[line_count++] += " hPa";
-				}
-				while (line_count < 3)
-				{
-					display_lines[line_count++] = emptyString;
-				}
-				break;
-			case 4:
-				display_header = "NEO6M";
-				display_lines[0] = "Lat: ";
-				display_lines[0] += check_display_value(lat_value, -200.0, 6, 10);
-				display_lines[1] = "Lon: ";
-				display_lines[1] += check_display_value(lon_value, -200.0, 6, 10);
-				display_lines[2] = "Alt: ";
-				display_lines[2] += check_display_value(alt_value, -1000.0, 2, 10);
-				break;
-			case 5:
-				display_header = F("Wifi info");
-				display_lines[0] = "IP: ";
-				display_lines[0] += WiFi.localIP().toString();
-				display_lines[1] = "SSID: ";
-				display_lines[1] += WiFi.SSID();
-				display_lines[2] = std::move(tmpl(F("Signal: {v} %"), String(calcWiFiSignalQuality(last_signal_strength))));
-				break;
-			case 6:
-				display_header = F("Device Info");
-				display_lines[0] = "ID: ";
-				display_lines[0] += esp_chipid;
-				display_lines[1] = "FW: ";
-				display_lines[1] += SOFTWARE_VERSION;
-				display_lines[2] = F("Measurements: ");
-				display_lines[2] += String(count_sends);
-				break;
-			case 7:
-				display_header = F("LoRaWAN Info");
-				display_lines[0] = "APPEUI: ";
-				display_lines[0] += cfg::appeui;
-				display_lines[1] = "DEVEUI: ";
-				display_lines[1] += cfg::deveui;
-				display_lines[2] = "APPKEY: ";
-				display_lines[2] += cfg::appkey;
-				break;
+				display_lines[line_count] = "Temp.: ";
+				display_lines[line_count] += check_display_value(t_value, -128, 1, 6);
+				display_lines[line_count++] += " °C";
 			}
+			if (h_sensor != "")
+			{
+				display_lines[line_count] = "Hum.:  ";
+				display_lines[line_count] += check_display_value(h_value, -1, 1, 6);
+				display_lines[line_count++] += " %";
+			}
+			if (p_sensor != "")
+			{
+				display_lines[line_count] = "Pres.: ";
+				display_lines[line_count] += check_display_value(p_value / 100, (-1 / 100.0), 1, 6);
+				display_lines[line_count++] += " hPa";
+			}
+			while (line_count < 3)
+			{
+				display_lines[line_count++] = emptyString;
+			}
+			break;
+		case 4:
+			display_header = "NEO6M";
+			display_lines[0] = "Lat: ";
+			display_lines[0] += check_display_value(lat_value, -200.0, 6, 10);
+			display_lines[1] = "Lon: ";
+			display_lines[1] += check_display_value(lon_value, -200.0, 6, 10);
+			display_lines[2] = "Alt: ";
+			display_lines[2] += check_display_value(alt_value, -1000.0, 2, 10);
+			break;
+		case 5:
+			display_header = F("Wifi info");
+			display_lines[0] = "IP: ";
+			display_lines[0] += WiFi.localIP().toString();
+			display_lines[1] = "SSID: ";
+			display_lines[1] += WiFi.SSID();
+			display_lines[2] = std::move(tmpl(F("Signal: {v} %"), String(calcWiFiSignalQuality(last_signal_strength))));
+			break;
+		case 6:
+			display_header = F("Device Info");
+			display_lines[0] = "ID: ";
+			display_lines[0] += esp_chipid;
+			display_lines[1] = "FW: ";
+			display_lines[1] += SOFTWARE_VERSION;
+			display_lines[2] = F("Measurements: ");
+			display_lines[2] += String(count_sends);
+			break;
+		case 7:
+			display_header = F("LoRaWAN Info");
+			display_lines[0] = "APPEUI: ";
+			display_lines[0] += cfg::appeui;
+			display_lines[1] = "DEVEUI: ";
+			display_lines[1] += cfg::deveui;
+			display_lines[2] = "APPKEY: ";
+			display_lines[2] += cfg::appkey;
+			break;
+		}
 
-			if (oled_ssd1306)
-			{
-				oled_ssd1306->clear();
-				oled_ssd1306->displayOn();
-				oled_ssd1306->setTextAlignment(TEXT_ALIGN_CENTER);
-				oled_ssd1306->drawString(64, 1, display_header);
-				oled_ssd1306->setTextAlignment(TEXT_ALIGN_LEFT);
-				oled_ssd1306->drawString(0, 16, display_lines[0]);
-				oled_ssd1306->drawString(0, 28, display_lines[1]);
-				oled_ssd1306->drawString(0, 40, display_lines[2]);
-				oled_ssd1306->setTextAlignment(TEXT_ALIGN_CENTER);
-				oled_ssd1306->drawString(64, 52, displayGenerateFooter(screen_count));
-				oled_ssd1306->display();
-			}
+		if (oled_ssd1306)
+		{
+			oled_ssd1306->clear();
+			oled_ssd1306->displayOn();
+			oled_ssd1306->setTextAlignment(TEXT_ALIGN_CENTER);
+			oled_ssd1306->drawString(64, 1, display_header);
+			oled_ssd1306->setTextAlignment(TEXT_ALIGN_LEFT);
+			oled_ssd1306->drawString(0, 16, display_lines[0]);
+			oled_ssd1306->drawString(0, 28, display_lines[1]);
+			oled_ssd1306->drawString(0, 40, display_lines[2]);
+			oled_ssd1306->setTextAlignment(TEXT_ALIGN_CENTER);
+			oled_ssd1306->drawString(64, 52, displayGenerateFooter(screen_count));
+			oled_ssd1306->display();
+		}
 	}
 
 	// ----5----0----5----0
@@ -2963,9 +2971,9 @@ static void display_values()
 static void init_display()
 {
 	//if (cfg::has_display && cfg::has_ssd1306)
-		if (cfg::has_ssd1306)
+	if (cfg::has_ssd1306)
 
-		{
+	{
 
 #if defined(ARDUINO_TTGO_LoRa32_v21new)
 		oled_ssd1306 = new SSD1306Wire(0x3c, I2C_PIN_SDA, I2C_PIN_SCL);
@@ -2974,7 +2982,7 @@ static void init_display()
 #if defined(ARDUINO_HELTEC_WIFI_LORA_32_V2)
 		oled_ssd1306 = new SSD1306Wire(0x3c, I2C_SCREEN_SDA, I2C_SCREEN_SCL);
 #endif
-		
+
 		oled_ssd1306->init();
 		oled_ssd1306->flipScreenVertically(); //ENLEVER ???
 		oled_ssd1306->clear();
@@ -2983,12 +2991,12 @@ static void init_display()
 		oled_ssd1306->drawString(64, 1, "START");
 		oled_ssd1306->display();
 
-	// reset back to 100k as the OLEDDisplay initialization is
-	// modifying the I2C speed to 400k, which overwhelms some of the
-	// sensors.
-	Wire.setClock(100000);
-	//Wire.setClockStretchLimit(150000);
-}
+		// reset back to 100k as the OLEDDisplay initialization is
+		// modifying the I2C speed to 400k, which overwhelms some of the
+		// sensors.
+		Wire.setClock(100000);
+		//Wire.setClockStretchLimit(150000);
+	}
 }
 /*****************************************************************
  * Init BMP280/BME280                                            *
@@ -3020,7 +3028,6 @@ static bool initBMX280(char addr)
 
 static void powerOnTestSensors()
 {
-
 
 	if (cfg::sds_read)
 	{
@@ -3055,8 +3062,6 @@ static void powerOnTestSensors()
 				if (data[1] == 0x16 && bitRead(data[2], 0) == 1)
 				{
 					delay(1000);
-					const uint8_t constexpr answer_start[4] = {0x81, 0x15, 0x00, 0x6A};
-					const uint8_t constexpr answer_stop[4] = {0x81, 0x15, 0x01, 0x69};
 					uint8_t data[4];
 					debug_outln_info(F("Force Start NPM...")); // to read the firmware version
 					NPM_cmd(PmSensorCmd2::Change);
@@ -3075,11 +3080,17 @@ static void powerOnTestSensors()
 						{
 
 							NPM_data_reader(data, 4);
+							NPM_state(data[2]);
 
 							if (memcmp(data, answer_start, 4) == 0)
 							{
 								debug_outln_info(F("Next PM Start..."));
 							}
+							else
+						{
+							debug_outln_info(F("Next PM Start degraded state..."));
+						
+						}
 							break;
 						}
 					}
@@ -3100,11 +3111,17 @@ static void powerOnTestSensors()
 						if (r == sizeof(data) && NPM_checksum_valid_4(data))
 						{
 							NPM_data_reader(data, 4);
+							NPM_state(data[2]);
 
 							if (memcmp(data, answer_stop, 4) == 0)
 							{
 								debug_outln_info(F("Next PM Stop..."));
 							}
+							else
+						{
+							debug_outln_info(F("Next PM Stop degraded state..."));
+							
+						}
 							break;
 						}
 					}
@@ -3123,7 +3140,6 @@ static void powerOnTestSensors()
 					debug_outln_info(F("Next PM is on..."));
 					debug_outln_info(F("Read NPM version...: "), NPM_version_date());
 					delay(1000);
-					const uint8_t constexpr answer_stop[4] = {0x81, 0x15, 0x01, 0x69};
 					uint8_t data[4];
 					debug_outln_info(F("Force Stop NPM..."));
 					NPM_cmd(PmSensorCmd2::Change);
@@ -3139,11 +3155,17 @@ static void powerOnTestSensors()
 						if (r == sizeof(data) && NPM_checksum_valid_4(data))
 						{
 							NPM_data_reader(data, 4);
+							NPM_state(data[2]);
 
 							if (memcmp(data, answer_stop, 4) == 0)
 							{
 								debug_outln_info(F("Next PM Stop..."));
-							}
+							}						
+							else
+						{
+							debug_outln_info(F("Next PM Stop degraded state..."));
+							
+						}	
 							break;
 						}
 					}
@@ -3163,7 +3185,6 @@ static void powerOnTestSensors()
 			bmx280_init_failed = true;
 		}
 	}
-
 }
 
 static void logEnabledAPIs()
@@ -3199,8 +3220,8 @@ static void logEnabledDisplays()
 	//if (cfg::has_display || cfg::has_ssd1306)
 	if (cfg::has_ssd1306)
 
-		{
-			debug_outln_info(F("Show on OLED..."));
+	{
+		debug_outln_info(F("Show on OLED..."));
 	}
 }
 
@@ -3318,41 +3339,41 @@ void ToByteArray()
 	//  Debug.println(deveui_str);
 	//  Debug.println(appkey_str);
 
-	 int j = 0;
-	 int k = 0;
-	 //int l = 0;
+	int j = 0;
+	int k = 0;
+	//int l = 0;
 
-	 for (unsigned int i = 0; i < appeui_str.length(); i += 2)
-	 {
-		 String byteString = appeui_str.substring(i, i+2);
+	for (unsigned int i = 0; i < appeui_str.length(); i += 2)
+	{
+		String byteString = appeui_str.substring(i, i + 2);
 		//  Debug.println(byteString);
-		 byte byte = (char)strtol(byteString.c_str(), NULL, 16);
+		byte byte = (char)strtol(byteString.c_str(), NULL, 16);
 		//  Debug.println(byte,HEX);
-		 appeui_hex[(appeui_str.length()/2) -1 - j] = byte; //reverse
-		 j += 1;
-	 }
+		appeui_hex[(appeui_str.length() / 2) - 1 - j] = byte; //reverse
+		j += 1;
+	}
 
-	 for (unsigned int i = 0; i < deveui_str.length(); i += 2)
-	 {
-		 String byteString = deveui_str.substring(i, i + 2);
+	for (unsigned int i = 0; i < deveui_str.length(); i += 2)
+	{
+		String byteString = deveui_str.substring(i, i + 2);
 		//  Debug.println(byteString);
-		 byte byte = (char)strtol(byteString.c_str(), NULL, 16);
+		byte byte = (char)strtol(byteString.c_str(), NULL, 16);
 		//  Debug.println(byte, HEX);
-		 deveui_hex[(deveui_str.length() / 2) - 1 - k] = byte; //reverse
-		 k += 1;
-	 }
+		deveui_hex[(deveui_str.length() / 2) - 1 - k] = byte; //reverse
+		k += 1;
+	}
 
-	 for (unsigned int i = 0; i < appkey_str.length(); i += 2)
-	 {
-		 String byteString = appkey_str.substring(i, i + 2);
+	for (unsigned int i = 0; i < appkey_str.length(); i += 2)
+	{
+		String byteString = appkey_str.substring(i, i + 2);
 		//  Debug.println(byteString);
-		 byte byte = (char)strtol(byteString.c_str(), NULL, 16);
+		byte byte = (char)strtol(byteString.c_str(), NULL, 16);
 		//  Debug.println(byte, HEX);
-		 //appkey_hex[(appkey_str.length() / 2) - 1 - l] = byte; // reverse
-		 appkey_hex[i] = byte; //not reverse
-		 //l += 1;
-	 }
- }
+		//appkey_hex[(appkey_str.length() / 2) - 1 - l] = byte; // reverse
+		appkey_hex[i] = byte; //not reverse
+							  //l += 1;
+	}
+}
 
 void printHex2(unsigned v)
 {
@@ -3374,19 +3395,19 @@ void do_send(osjob_t *j)
 	{
 		// Prepare upstream data transmission at the next possible time.
 
-		if(cfg::sds_read)
+		if (cfg::sds_read)
 		{
 			LMIC_setTxData2(1, datalora_sds, sizeof(datalora_sds) - 1, 0);
 		}
 
-		if(cfg::npm_read)
+		if (cfg::npm_read)
 		{
 			LMIC_setTxData2(1, datalora_npm, sizeof(datalora_npm) - 1, 0);
 		}
 
-// u1_t port is the FPort used for the transmission. Default is 1. 
-// You can send different kind of data using different FPorts, 
-// so the payload decoder can extract the information depending on the port used.
+		// u1_t port is the FPort used for the transmission. Default is 1.
+		// You can send different kind of data using different FPorts,
+		// so the payload decoder can extract the information depending on the port used.
 
 		Debug.println(F("Packet queued"));
 	}
@@ -3529,106 +3550,107 @@ static void prepareTxFrame()
 		byte temp_byte[4];
 	} u;
 
-if(cfg::sds_read){
-	u.temp_float = last_value_SDS_P1;
-
-	datalora_sds[0] = u.temp_byte[0];
-	datalora_sds[1] = u.temp_byte[1];
-	datalora_sds[2] = u.temp_byte[2];
-	datalora_sds[3] = u.temp_byte[3];
-
-	u.temp_float = last_value_SDS_P2;
-
-	datalora_sds[4] = u.temp_byte[0];
-	datalora_sds[5] = u.temp_byte[1];
-	datalora_sds[6] = u.temp_byte[2];
-	datalora_sds[7] = u.temp_byte[3];
-
-	u.temp_float = last_value_BMX280_T;
-
-	datalora_sds[8] = u.temp_byte[0];
-	datalora_sds[9] = u.temp_byte[1];
-	datalora_sds[10] = u.temp_byte[2];
-	datalora_sds[11] = u.temp_byte[3];
-
-	u.temp_float = last_value_BMX280_P;
-
-	datalora_sds[12] = u.temp_byte[0];
-	datalora_sds[13] = u.temp_byte[1];
-	datalora_sds[14] = u.temp_byte[2];
-	datalora_sds[15] = u.temp_byte[3];
-
-	u.temp_float = last_value_BME280_H;
-
-	datalora_sds[16] = u.temp_byte[0];
-	datalora_sds[17] = u.temp_byte[1];
-	datalora_sds[18] = u.temp_byte[2];
-	datalora_sds[19] = u.temp_byte[3];
-
-	Debug.printf("HEX values:\n");
-	for (int i = 0; i < 20; i++)
+	if (cfg::sds_read)
 	{
-		Debug.printf(" %02x", datalora_sds[i]);
-		if (i == 19)
+		u.temp_float = last_value_SDS_P1;
+
+		datalora_sds[0] = u.temp_byte[0];
+		datalora_sds[1] = u.temp_byte[1];
+		datalora_sds[2] = u.temp_byte[2];
+		datalora_sds[3] = u.temp_byte[3];
+
+		u.temp_float = last_value_SDS_P2;
+
+		datalora_sds[4] = u.temp_byte[0];
+		datalora_sds[5] = u.temp_byte[1];
+		datalora_sds[6] = u.temp_byte[2];
+		datalora_sds[7] = u.temp_byte[3];
+
+		u.temp_float = last_value_BMX280_T;
+
+		datalora_sds[8] = u.temp_byte[0];
+		datalora_sds[9] = u.temp_byte[1];
+		datalora_sds[10] = u.temp_byte[2];
+		datalora_sds[11] = u.temp_byte[3];
+
+		u.temp_float = last_value_BMX280_P;
+
+		datalora_sds[12] = u.temp_byte[0];
+		datalora_sds[13] = u.temp_byte[1];
+		datalora_sds[14] = u.temp_byte[2];
+		datalora_sds[15] = u.temp_byte[3];
+
+		u.temp_float = last_value_BME280_H;
+
+		datalora_sds[16] = u.temp_byte[0];
+		datalora_sds[17] = u.temp_byte[1];
+		datalora_sds[18] = u.temp_byte[2];
+		datalora_sds[19] = u.temp_byte[3];
+
+		Debug.printf("HEX values:\n");
+		for (int i = 0; i < 20; i++)
 		{
-			Debug.printf("\n");
+			Debug.printf(" %02x", datalora_sds[i]);
+			if (i == 19)
+			{
+				Debug.printf("\n");
+			}
 		}
 	}
-}
-if (cfg::npm_read)
-{
-	u.temp_float = last_value_NPM_P0;
-
-	datalora_npm[0] = u.temp_byte[0];
-	datalora_npm[1] = u.temp_byte[1];
-	datalora_npm[2] = u.temp_byte[2];
-	datalora_npm[3] = u.temp_byte[3];
-
-	u.temp_float = last_value_NPM_P1;
-
-	datalora_npm[4] = u.temp_byte[0];
-	datalora_npm[5] = u.temp_byte[1];
-	datalora_npm[6] = u.temp_byte[2];
-	datalora_npm[7] = u.temp_byte[3];
-
-	u.temp_float = last_value_NPM_P2;
-
-	datalora_npm[8] = u.temp_byte[0];
-	datalora_npm[9] = u.temp_byte[1];
-	datalora_npm[10] = u.temp_byte[2];
-	datalora_npm[11] = u.temp_byte[3];
-
-	u.temp_float = last_value_BMX280_T;
-
-	datalora_npm[12] = u.temp_byte[0];
-	datalora_npm[13] = u.temp_byte[1];
-	datalora_npm[14] = u.temp_byte[2];
-	datalora_npm[15] = u.temp_byte[3];
-
-	u.temp_float = last_value_BMX280_P;
-
-	datalora_npm[16] = u.temp_byte[0];
-	datalora_npm[17] = u.temp_byte[1];
-	datalora_npm[18] = u.temp_byte[2];
-	datalora_npm[19] = u.temp_byte[3];
-
-	u.temp_float = last_value_BME280_H;
-
-	datalora_npm[20] = u.temp_byte[0];
-	datalora_npm[21] = u.temp_byte[1];
-	datalora_npm[22] = u.temp_byte[2];
-	datalora_npm[23] = u.temp_byte[3];
-
-	Debug.printf("HEX values:\n");
-	for (int i = 0; i < 20; i++)
+	if (cfg::npm_read)
 	{
-		Debug.printf(" %02x", datalora_npm[i]);
-		if (i == 19)
+		u.temp_float = last_value_NPM_P0;
+
+		datalora_npm[0] = u.temp_byte[0];
+		datalora_npm[1] = u.temp_byte[1];
+		datalora_npm[2] = u.temp_byte[2];
+		datalora_npm[3] = u.temp_byte[3];
+
+		u.temp_float = last_value_NPM_P1;
+
+		datalora_npm[4] = u.temp_byte[0];
+		datalora_npm[5] = u.temp_byte[1];
+		datalora_npm[6] = u.temp_byte[2];
+		datalora_npm[7] = u.temp_byte[3];
+
+		u.temp_float = last_value_NPM_P2;
+
+		datalora_npm[8] = u.temp_byte[0];
+		datalora_npm[9] = u.temp_byte[1];
+		datalora_npm[10] = u.temp_byte[2];
+		datalora_npm[11] = u.temp_byte[3];
+
+		u.temp_float = last_value_BMX280_T;
+
+		datalora_npm[12] = u.temp_byte[0];
+		datalora_npm[13] = u.temp_byte[1];
+		datalora_npm[14] = u.temp_byte[2];
+		datalora_npm[15] = u.temp_byte[3];
+
+		u.temp_float = last_value_BMX280_P;
+
+		datalora_npm[16] = u.temp_byte[0];
+		datalora_npm[17] = u.temp_byte[1];
+		datalora_npm[18] = u.temp_byte[2];
+		datalora_npm[19] = u.temp_byte[3];
+
+		u.temp_float = last_value_BME280_H;
+
+		datalora_npm[20] = u.temp_byte[0];
+		datalora_npm[21] = u.temp_byte[1];
+		datalora_npm[22] = u.temp_byte[2];
+		datalora_npm[23] = u.temp_byte[3];
+
+		Debug.printf("HEX values:\n");
+		for (int i = 0; i < 20; i++)
 		{
-			Debug.printf("\n");
+			Debug.printf(" %02x", datalora_npm[i]);
+			if (i == 19)
+			{
+				Debug.printf("\n");
+			}
 		}
 	}
-}
 }
 
 /*****************************************************************
@@ -3638,9 +3660,8 @@ if (cfg::npm_read)
 void setup(void)
 {
 
-
 	Debug.begin(9600); // Output to Serial at 9600 baud
-//----------------------------------------------
+					   //----------------------------------------------
 
 	// uint64_t chipid_num;
 	// chipid_num = ESP.getEfuseMac();
@@ -3665,7 +3686,7 @@ void setup(void)
 	Wire.begin(I2C_PIN_SDA, I2C_PIN_SCL);
 #endif
 
-// #if defined(ARDUINO_HELTEC_WIFI_LORA_32_V2)
+	// #if defined(ARDUINO_HELTEC_WIFI_LORA_32_V2)
 	//Heltec.begin(true /*DisplayEnable Enable*/, true /*LoRa Disable*/, true /*Serial Enable*/, true /*PABOOST Enable*/, 470E6 /**/);
 	// if (cfg::has_lora)
 	// {
@@ -3693,7 +3714,7 @@ void setup(void)
 
 	if (cfg::npm_read)
 	{
-		serialNPM.begin(115200, SERIAL_8E1, PM_SERIAL_RX, PM_SERIAL_TX); 
+		serialNPM.begin(115200, SERIAL_8E1, PM_SERIAL_RX, PM_SERIAL_TX);
 		Debug.println("Read Next PM... serialNPM 115200 8E1");
 		serialNPM.setTimeout(400);
 	}
@@ -3748,28 +3769,28 @@ void setup(void)
 		disable_unneeded_nmea();
 	}
 
-// always start the Webserver on void setup to get access to the sensor
+	// always start the Webserver on void setup to get access to the sensor
 
+	if (cfg::has_wifi)
+	{
+		setupNetworkTime();
+	}
 
-if(cfg::has_wifi){
-	setupNetworkTime();
-}
+	connectWifi();
+	setup_webserver();
+	createLoggerConfigs();
+	logEnabledAPIs();
+	powerOnTestSensors();
+	logEnabledDisplays();
 
-connectWifi();
-setup_webserver();
-createLoggerConfigs();
-logEnabledAPIs();
-powerOnTestSensors();
-logEnabledDisplays();
+	delay(50);
 
-delay(50);
+	starttime = millis(); // store the start time
+	last_update_attempt = time_point_device_start_ms = starttime;
 
-starttime = millis(); // store the start time
-last_update_attempt = time_point_device_start_ms = starttime;
-
-if (cfg::npm_read)
-{
-	last_display_millis = starttime;
+	if (cfg::npm_read)
+	{
+		last_display_millis = starttime_NPM = starttime;
 	}
 	else
 	{
@@ -3811,7 +3832,6 @@ if (cfg::npm_read)
 			}
 		}
 
-
 		if (!strcmp(cfg::appeui, "0000000000000000") && !strcmp(cfg::deveui, "0000000000000000") && !strcmp(cfg::appkey, "00000000000000000000000000000000"))
 		{
 			const lmic_pinmap *pPinMap = Arduino_LMIC::GetPinmap_ThisBoard();
@@ -3829,8 +3849,8 @@ if (cfg::npm_read)
 			LMIC_setLinkCheckMode(0);
 			LMIC_setDrTxpow(DR_SF7, 14); //BONNE OPTION????
 
-	//Set the data rate to Spreading Factor 7.  This is the fastest supported rate for 125 kHz channels, and it
-    // minimizes air time and battery power. Set the transmission power to 14 dBi (25 mW).
+			//Set the data rate to Spreading Factor 7.  This is the fastest supported rate for 125 kHz channels, and it
+			// minimizes air time and battery power. Set the transmission power to 14 dBi (25 mW).
 
 			// Start job (sending automatically starts OTAA too)
 			do_send(&sendjob); //ATTENTION PREMIER START!!!!!
@@ -3851,7 +3871,7 @@ void loop(void)
 	act_micro = micros();
 	act_milli = millis();
 	send_now = msSince(starttime) > cfg::sending_intervall_ms;
-	
+
 	// Wait at least 30s for each NTP server to sync
 
 	// ATTENTION SNTP SI LORA
@@ -3876,17 +3896,19 @@ void loop(void)
 
 	if (cfg::npm_read)
 	{
-		fetchSensorNPM(result_NPM); // independant time management directly in function
+		if ((msSince(starttime_NPM) > SAMPLETIME_NPM_MS) || send_now)
+		{
+			starttime_NPM = act_milli;
+			fetchSensorNPM(result_NPM);
+		}
 	}
-	else
+
+	if (cfg::sds_read)
 	{
 		if ((msSince(starttime_SDS) > SAMPLETIME_SDS_MS) || send_now)
 		{
 			starttime_SDS = act_milli;
-			if (cfg::sds_read)
-			{
-				fetchSensorSDS(result_SDS);
-			}
+			fetchSensorSDS(result_SDS);
 		}
 	}
 
@@ -3907,11 +3929,11 @@ void loop(void)
 	}
 
 	//if ((msSince(last_display_millis) > DISPLAY_UPDATE_INTERVAL_MS) && (cfg::has_display && cfg::has_ssd1306 ))
-		if ((msSince(last_display_millis) > DISPLAY_UPDATE_INTERVAL_MS) && (cfg::has_ssd1306))
+	if ((msSince(last_display_millis) > DISPLAY_UPDATE_INTERVAL_MS) && (cfg::has_ssd1306))
 
-		{
-			display_values();
-			last_display_millis = act_milli;
+	{
+		display_values();
+		last_display_millis = act_milli;
 	}
 
 	server.handleClient();
@@ -3919,129 +3941,139 @@ void loop(void)
 
 	if (send_now)
 	{
-	if (cfg::has_wifi){
-
-		last_signal_strength = WiFi.RSSI();
-		RESERVE_STRING(data, LARGE_STR);
-		data = FPSTR(data_first_part);
-		RESERVE_STRING(result, MED_STR);
-
-		if (cfg::sds_read)
+		if (cfg::has_wifi)
 		{
-			data += result_SDS;
-			sum_send_time += sendSensorCommunity(result_SDS, SDS_API_PIN, FPSTR(SENSORS_SDS011), "SDS_");
-		}
-		if (cfg::npm_read)
-		{
-			data += result_NPM;
-			sum_send_time += sendSensorCommunity(result_NPM, NPM_API_PIN, FPSTR(SENSORS_NPM), "NPM_");
-		}
 
-		if (cfg::bmx280_read && (!bmx280_init_failed))
-		{
-			// getting temperature, humidity and pressure (optional)
-			fetchSensorBMX280(result);
-			data += result;
-			if (bmx280.sensorID() == BME280_SENSOR_ID)
+			last_signal_strength = WiFi.RSSI();
+			RESERVE_STRING(data, LARGE_STR);
+			data = FPSTR(data_first_part);
+			RESERVE_STRING(result, MED_STR);
+
+			if (cfg::sds_read)
 			{
-				sum_send_time += sendSensorCommunity(result, BME280_API_PIN, FPSTR(SENSORS_BME280), "BME280_");
+				data += result_SDS;
+				sum_send_time += sendSensorCommunity(result_SDS, SDS_API_PIN, FPSTR(SENSORS_SDS011), "SDS_");
 			}
-			else
+			if (cfg::npm_read)
 			{
-				sum_send_time += sendSensorCommunity(result, BMP280_API_PIN, FPSTR(SENSORS_BMP280), "BMP280_");
+				data += result_NPM;
+				sum_send_time += sendSensorCommunity(result_NPM, NPM_API_PIN, FPSTR(SENSORS_NPM), "NPM_");
+				Debug.println(data);
 			}
-			result = emptyString;
+
+			if (cfg::bmx280_read && (!bmx280_init_failed))
+			{
+				// getting temperature, humidity and pressure (optional)
+				fetchSensorBMX280(result);
+				data += result;
+				if (bmx280.sensorID() == BME280_SENSOR_ID)
+				{
+					sum_send_time += sendSensorCommunity(result, BME280_API_PIN, FPSTR(SENSORS_BME280), "BME280_");
+				}
+				else
+				{
+					sum_send_time += sendSensorCommunity(result, BMP280_API_PIN, FPSTR(SENSORS_BMP280), "BMP280_");
+				}
+				result = emptyString;
+				Debug.println(data);
+			}
+
+			if (cfg::gps_read)
+			{
+				data += result_GPS;
+				sum_send_time += sendSensorCommunity(result_GPS, GPS_API_PIN, F("GPS"), "GPS_");
+				result = emptyString;
+			}
+
+			add_Value2Json(data, F("samples"), String(sample_count));
+			add_Value2Json(data, F("min_micro"), String(min_micro));
+			add_Value2Json(data, F("max_micro"), String(max_micro));
+			add_Value2Json(data, F("interval"), String(cfg::sending_intervall_ms));
+			add_Value2Json(data, F("signal"), String(last_signal_strength));
+
+			if ((unsigned)(data.lastIndexOf(',') + 1) == data.length())
+			{
+				data.remove(data.length() - 1);
+			}
+			data += "]}";
+
+			yield();
+			Debug.println(data);
+			sum_send_time += sendDataToOptionalApis(data);
+
+			//MODELE => CHANGER POUR PMS!!!
+
+			//{"software_version" : "Nebulo-V1-122021", "sensordatavalues" : [ {"value_type" : "NPM_P0", "value" : "1.84"}, {"value_type" : "NPM_P1", "value" : "2.80"}, {"value_type" : "NPM_P2", "value" : "2.06"}, {"value_type" : "NPM_N1", "value" : "27.25"}, {"value_type" : "NPM_N10", "value" : "27.75"}, {"value_type" : "NPM_N25", "value" : "27.50"}, {"value_type" : "BME280_temperature", "value" : "20.84"}, {"value_type" : "BME280_pressure", "value" : "99220.03"}, {"value_type" : "BME280_humidity", "value" : "61.66"}, {"value_type" : "samples", "value" : "138555"}, {"value_type" : "min_micro", "value" : "933"}, {"value_type" : "max_micro", "value" : "351024"}, {"value_type" : "interval", "value" : "145000"}, {"value_type" : "signal", "value" : "-71"} ]}
+
+			// https://en.wikipedia.org/wiki/Moving_average#Cumulative_moving_average
+			sending_time = (3 * sending_time + sum_send_time) / 4;
+			if (sum_send_time > 0)
+			{
+				debug_outln_info(F("Time for Sending (ms): "), String(sending_time));
+			}
+
+			// reconnect to WiFi if disconnected
+			if (WiFi.status() != WL_CONNECTED)
+			{
+				debug_outln_info(F("Connection lost, reconnecting "));
+				WiFi_error_count++;
+				WiFi.reconnect();
+				waitForWifiToConnect(20);
+			}
+
+			// only do a restart after finishing sending
+			if (msSince(time_point_device_start_ms) > DURATION_BEFORE_FORCED_RESTART_MS)
+			{
+				sensor_restart();
+			}
+
+			// Resetting for next sampling
+			last_data_string = std::move(data);
+			sample_count = 0;
+			last_micro = 0;
+			min_micro = 1000000000;
+			max_micro = 0;
+			sum_send_time = 0;
+			starttime = millis(); // store the start time
+			count_sends++;
 		}
-		if (cfg::gps_read)
+
+		if (cfg::has_lora)
 		{
-			data += result_GPS;
-			sum_send_time += sendSensorCommunity(result_GPS, GPS_API_PIN, F("GPS"), "GPS_");
-			result = emptyString;
+			prepareTxFrame();
+			os_runloop_once();
+
+			// POUR VERIF:
+			// void os_runloop_once()
+			// {
+			// 	osjob_t *j = NULL;
+			// 	hal_processPendingIRQs();
+
+			// 	hal_disableIRQs();
+			// 	// check for runnable jobs
+			// 	if (OS.runnablejobs)
+			// 	{
+			// 		j = OS.runnablejobs;
+			// 		OS.runnablejobs = j->next;
+			// 	}
+			// 	else if (OS.scheduledjobs && hal_checkTimer(OS.scheduledjobs->deadline))
+			// 	{ // check for expired timed jobs
+			// 		j = OS.scheduledjobs;
+			// 		OS.scheduledjobs = j->next;
+			// 	}
+			// 	else
+			// 	{				 // nothing pending
+			// 		hal_sleep(); // wake by irq (timer already restarted)
+			// 	}
+			// 	hal_enableIRQs();
+			// 	if (j)
+			// 	{ // run job callback
+			// 		j->func(j);
+			// 	}
+			// }
 		}
-		add_Value2Json(data, F("samples"), String(sample_count));
-		add_Value2Json(data, F("min_micro"), String(min_micro));
-		add_Value2Json(data, F("max_micro"), String(max_micro));
-		add_Value2Json(data, F("interval"), String(cfg::sending_intervall_ms));
-		add_Value2Json(data, F("signal"), String(last_signal_strength));
-
-		if ((unsigned)(data.lastIndexOf(',') + 1) == data.length())
-		{
-			data.remove(data.length() - 1);
-		}
-		data += "]}";
-
-		yield();
-
-		sum_send_time += sendDataToOptionalApis(data);
-
-		// https://en.wikipedia.org/wiki/Moving_average#Cumulative_moving_average
-		sending_time = (3 * sending_time + sum_send_time) / 4;
-		if (sum_send_time > 0)
-		{
-			debug_outln_info(F("Time for Sending (ms): "), String(sending_time));
-		}
-
-		// reconnect to WiFi if disconnected
-		if (WiFi.status() != WL_CONNECTED)
-		{
-			debug_outln_info(F("Connection lost, reconnecting "));
-			WiFi_error_count++;
-			WiFi.reconnect();
-			waitForWifiToConnect(20);
-		}
-
-		// only do a restart after finishing sending
-		if (msSince(time_point_device_start_ms) > DURATION_BEFORE_FORCED_RESTART_MS)
-		{
-			sensor_restart();
-		}
-
-		// Resetting for next sampling
-		last_data_string = std::move(data);
-		sample_count = 0;
-		last_micro = 0;
-		min_micro = 1000000000;
-		max_micro = 0;
-		sum_send_time = 0;
-		starttime = millis(); // store the start time
-		count_sends++;
 	}
-	
-	if(cfg::has_lora){
-		prepareTxFrame();
-		os_runloop_once();
 
-	// POUR VERIF:
-		// void os_runloop_once()
-		// {
-		// 	osjob_t *j = NULL;
-		// 	hal_processPendingIRQs();
-
-		// 	hal_disableIRQs();
-		// 	// check for runnable jobs
-		// 	if (OS.runnablejobs)
-		// 	{
-		// 		j = OS.runnablejobs;
-		// 		OS.runnablejobs = j->next;
-		// 	}
-		// 	else if (OS.scheduledjobs && hal_checkTimer(OS.scheduledjobs->deadline))
-		// 	{ // check for expired timed jobs
-		// 		j = OS.scheduledjobs;
-		// 		OS.scheduledjobs = j->next;
-		// 	}
-		// 	else
-		// 	{				 // nothing pending
-		// 		hal_sleep(); // wake by irq (timer already restarted)
-		// 	}
-		// 	hal_enableIRQs();
-		// 	if (j)
-		// 	{ // run job callback
-		// 		j->func(j);
-		// 	}
-		// }
-	}
-	}
-	
 	if (sample_count % 500 == 0)
 	{
 		//		Serial.println(ESP.getFreeHeap(),DEC);

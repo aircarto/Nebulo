@@ -15,6 +15,11 @@ constexpr unsigned MED_STR = 256-1;
 constexpr unsigned LARGE_STR = 512-1;
 constexpr unsigned XLARGE_STR = 1024-1;
 
+//Answers Next PM
+const uint8_t constexpr answer_stop[4] = {0x81, 0x15, 0x01, 0x69};
+const uint8_t constexpr answer_start[4] = {0x81, 0x15, 0x00, 0x6A};
+const uint8_t constexpr answer_sleep[4] = {0x81, 0x16, 0x01, 0x68};
+
 #define RESERVE_STRING(name, size) String name((const char*)nullptr); name.reserve(size)
 
 #define UPDATE_MIN(MIN, SAMPLE) if (SAMPLE < MIN) { MIN = SAMPLE; }
@@ -60,7 +65,8 @@ enum class PmSensorCmd2 { // for NPM
 	State,
 	Change,
 	Concentration,
-	Version
+	Version,
+	Speed
 };
 
 /*****************************************************************
