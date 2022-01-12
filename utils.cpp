@@ -328,6 +328,12 @@ bool NPM_checksum_valid_4(const uint8_t (&data)[4]) {
 	return (checksum == 0);
 }
 
+bool NPM_checksum_valid_5(const uint8_t (&data)[5]) {
+	uint8_t sum = data[0] + data[1] + data[2] + data[3] + data[4];
+	uint8_t checksum = sum % 0x100;
+	return (checksum == 0);
+}
+
 bool NPM_checksum_valid_6(const uint8_t (&data)[6])
 {
 	uint8_t sum = data[0] + data[1] + data[2] + data[3] + data[4] + data[5];
@@ -340,7 +346,6 @@ bool NPM_checksum_valid_16(const uint8_t (&data)[16]) {
 	uint8_t checksum = sum % 0x100;
 	return (checksum == 0);
 }
-
 
 void NPM_cmd(PmSensorCmd2 cmd) {
 
@@ -359,8 +364,8 @@ void NPM_cmd(PmSensorCmd2 cmd) {
 	};
 
 	static constexpr uint8_t speed_cmd[] PROGMEM = {
-		0x81, 0x21, 0x00, 0x5E //0% to get current value
-		//0x81, 0x21, 0x32, 0x2C //50% 
+		//0x81, 0x21, 0x00, 0x5E //0% to get current value
+		0x81, 0x21, 0x32, 0x2C //50% 
 	};
 
 //0x81 + 0x21 + 0x55 + 0x09 = 0x100
@@ -387,6 +392,7 @@ void NPM_cmd(PmSensorCmd2 cmd) {
 	}
 	serialNPM.write(buf, cmd_len);
 }
+
 
 /*****************************************************************
  * Helpers                                                       *

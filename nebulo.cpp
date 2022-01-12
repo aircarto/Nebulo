@@ -134,6 +134,8 @@ namespace cfg
 		strcpy_P(host_custom2, HOST_CUSTOM2);
 		strcpy_P(url_custom2, URL_CUSTOM2);
 
+		//AJOUTER LORA ICI?
+
 		if (!*fs_ssid)
 		{
 			strcpy(fs_ssid, SSID_BASENAME);
@@ -400,16 +402,117 @@ static String SDS_version_date()
 	return last_value_SDS_version;
 }
 
+
 /*****************************************************************
- * read Next PM sensor serial and firmware date                   *
+ * NPM functions     *
  *****************************************************************/
-static String NPM_version_date()
+
+static uint8_t NPM_get_state(){
+		uint8_t result;
+		NPM_waiting_for_4 = NPM_REPLY_HEADER_4;
+		debug_outln_info(F("State NPM..."));
+		NPM_cmd(PmSensorCmd2::State);
+
+		while (!serialNPM.available())
+		{
+			debug_outln("Wait for Serial...", DEBUG_MAX_INFO);
+		}
+
+        while (serialNPM.available() >= NPM_waiting_for_4)
+        {
+            const uint8_t constexpr header[2] = {0x81, 0x16};
+            uint8_t state[1];
+            uint8_t checksum[1];
+            uint8_t test[4];
+
+            switch (NPM_waiting_for_4)
+            {
+            case NPM_REPLY_HEADER_4:
+                if (serialNPM.find(header, sizeof(header)))
+                    NPM_waiting_for_4 = NPM_REPLY_STATE_4;
+                break;
+            case NPM_REPLY_STATE_4:
+                serialNPM.readBytes(state, sizeof(state));
+                NPM_state(state[0]);
+				result = state[0];
+                NPM_waiting_for_4 = NPM_REPLY_CHECKSUM_4;
+                break;
+            case NPM_REPLY_CHECKSUM_4:
+                serialNPM.readBytes(checksum, sizeof(checksum));
+                memcpy(test, header, sizeof(header));
+                memcpy(&test[sizeof(header)], state, sizeof(state));
+                memcpy(&test[sizeof(header) + sizeof(state)], checksum, sizeof(checksum));
+                NPM_data_reader(test, 4);
+				NPM_waiting_for_4 = NPM_REPLY_HEADER_4;
+                if (NPM_checksum_valid_4(test)){
+                    debug_outln_info(F("Checksum OK..."));	
+				}
+                break;
+            }
+        }
+		return result;
+}
+
+static bool NPM_start_stop(){
+		bool result;
+		NPM_waiting_for_4 = NPM_REPLY_HEADER_4;
+		debug_outln_info(F("Switch start/stop NPM..."));
+		NPM_cmd(PmSensorCmd2::Change);
+
+		while (!serialNPM.available())
+		{
+			debug_outln("Wait for Serial...", DEBUG_MAX_INFO);
+		}
+
+        while (serialNPM.available() >= NPM_waiting_for_4)
+        {
+            const uint8_t constexpr header[2] = {0x81, 0x15};
+            uint8_t state[1];
+            uint8_t checksum[1];
+            uint8_t test[4];
+
+            switch (NPM_waiting_for_4)
+            {
+            case NPM_REPLY_HEADER_4:
+                if (serialNPM.find(header, sizeof(header)))
+                    NPM_waiting_for_4 = NPM_REPLY_STATE_4;
+                break;
+            case NPM_REPLY_STATE_4:
+                serialNPM.readBytes(state, sizeof(state));
+                NPM_state(state[0]);
+
+				if (bitRead(state[0], 0) == 0){
+				debug_outln_info(F("NPM start..."));
+						result = true;
+				}else{
+				debug_outln_info(F("NPM stop..."));	
+						result = false;
+				}
+
+
+                NPM_waiting_for_4 = NPM_REPLY_CHECKSUM_4;
+                break;
+            case NPM_REPLY_CHECKSUM_4:
+                serialNPM.readBytes(checksum, sizeof(checksum));
+                memcpy(test, header, sizeof(header));
+                memcpy(&test[sizeof(header)], state, sizeof(state));
+                memcpy(&test[sizeof(header) + sizeof(state)], checksum, sizeof(checksum));
+                NPM_data_reader(test, 4);
+				NPM_waiting_for_4 = NPM_REPLY_HEADER_4;
+                if (NPM_checksum_valid_4(test)){
+                    debug_outln_info(F("Checksum OK..."));
+				}
+                break;
+            }
+        }
+return result; //ATTENTION
+}
+
+static void NPM_version_date()
 {
-	if (cfg::npm_read && !last_value_NPM_version.length())
-	{
-		debug_outln_verbose(FPSTR(DBG_TXT_START_READING), FPSTR(DBG_TXT_NPM_VERSION_DATE));
+		//debug_outln_verbose(FPSTR(DBG_TXT_START_READING), FPSTR(DBG_TXT_NPM_VERSION_DATE));
 		delay(250);
-		uint8_t data[6];
+		NPM_waiting_for_6 = NPM_REPLY_HEADER_6;
 		debug_outln_info(F("Version NPM..."));
 		NPM_cmd(PmSensorCmd2::Version);
 
@@ -418,31 +521,107 @@ static String NPM_version_date()
 			debug_outln("Wait for Serial...", DEBUG_MAX_INFO);
 		}
 
-		while (serialNPM.available() > 0)
+		while (serialNPM.available() >= NPM_waiting_for_6)
 		{
-			unsigned r = serialNPM.readBytes(data, sizeof(data));
-			if (r == sizeof(data) && NPM_checksum_valid_6(data))
-			{
-				NPM_data_reader(data, 6);
+         	const uint8_t constexpr header[2] = {0x81, 0x17};
+            uint8_t state[1];
+            uint8_t data[2];
+            uint8_t checksum[1];
+            uint8_t test[6];
 
-				uint16_t NPMversion = word(data[3], data[4]);
+switch (NPM_waiting_for_6)
+            {
+            case NPM_REPLY_HEADER_6:
+                if (serialNPM.find(header, sizeof(header)))
+                    NPM_waiting_for_6 = NPM_REPLY_STATE_6;
+                break;
+            case NPM_REPLY_STATE_6:
+                serialNPM.readBytes(state, sizeof(state));
+                NPM_state(state[0]);
+                NPM_waiting_for_6 = NPM_REPLY_DATA_6;
+                break;
+          case NPM_REPLY_DATA_6:
+ if (serialNPM.readBytes(data, sizeof(data)) == sizeof(data)){
+				NPM_data_reader(data, 2);
+				uint16_t NPMversion = word(data[0], data[1]);
 				last_value_NPM_version = String(NPMversion);
-				break;
-			}
-			else if (r == 4 && memcmp(data, answer_sleep, 4) == 0)
-			{
-				NPM_data_reader(data, 4);
-
-				debug_outln_info(F("Can't read version of Next PM..."));
-				last_value_NPM_version = "00";
-				break;
-			}
-		}
-		debug_outln_verbose(FPSTR(DBG_TXT_END_READING), FPSTR(DBG_TXT_NPM_VERSION_DATE));
-	}
-	debug_outln_info(F("Next PM Firmware: "), last_value_NPM_version);
-	return last_value_NPM_version;
+				//debug_outln_verbose(FPSTR(DBG_TXT_END_READING), FPSTR(DBG_TXT_NPM_VERSION_DATE));
+				debug_outln_info(F("Next PM Firmware: "), last_value_NPM_version);
+ }
+                NPM_waiting_for_6 = NPM_REPLY_CHECKSUM_6;
+                break;
+            case NPM_REPLY_CHECKSUM_6:
+                serialNPM.readBytes(checksum, sizeof(checksum));
+                memcpy(test, header, sizeof(header));
+                memcpy(&test[sizeof(header)], state, sizeof(state));
+                memcpy(&test[sizeof(header) + sizeof(state)], data, sizeof(data));
+				memcpy(&test[sizeof(header) + sizeof(state) + sizeof(data)], checksum, sizeof(checksum));
+                NPM_data_reader(test, 6);
+				NPM_waiting_for_6 = NPM_REPLY_HEADER_6;
+                if (NPM_checksum_valid_6(test)){
+                    debug_outln_info(F("Checksum OK..."));
+				}
+                break;
+            }
+		}	
 }
+
+
+
+static void NPM_fan_speed()
+{
+
+		NPM_waiting_for_5 = NPM_REPLY_HEADER_5;
+		debug_outln_info(F("Set fan speed to 50 %..."));
+		NPM_cmd(PmSensorCmd2::Speed);
+
+		while (!serialNPM.available())
+		{
+			debug_outln("Wait for Serial...", DEBUG_MAX_INFO);
+		}
+
+		while (serialNPM.available() >= NPM_waiting_for_5)
+		{
+         const uint8_t constexpr header[2] = {0x81, 0x21};
+            uint8_t state[1];
+            uint8_t data[1];
+            uint8_t checksum[1];
+            uint8_t test[5];
+
+switch (NPM_waiting_for_5)
+            {
+            case NPM_REPLY_HEADER_5:
+                if (serialNPM.find(header, sizeof(header)))
+                    NPM_waiting_for_5 = NPM_REPLY_STATE_5;
+                break;
+            case NPM_REPLY_STATE_5:
+                serialNPM.readBytes(state, sizeof(state));
+                NPM_state(state[0]);
+                NPM_waiting_for_5 = NPM_REPLY_DATA_5;
+                break;
+          case NPM_REPLY_DATA_5:
+ if (serialNPM.readBytes(data, sizeof(data)) == sizeof(data)){
+				NPM_data_reader(data, 1);
+ }
+                NPM_waiting_for_5 = NPM_REPLY_CHECKSUM_5;
+                break;
+            case NPM_REPLY_CHECKSUM_5:
+                serialNPM.readBytes(checksum, sizeof(checksum));
+                memcpy(test, header, sizeof(header));
+                memcpy(&test[sizeof(header)], state, sizeof(state));
+                memcpy(&test[sizeof(header) + sizeof(state)], data, sizeof(data));
+				memcpy(&test[sizeof(header) + sizeof(state) + sizeof(data)], checksum, sizeof(checksum));
+                NPM_data_reader(test, 5);
+				NPM_waiting_for_5 = NPM_REPLY_HEADER_5;
+                if (NPM_checksum_valid_5(test)){
+                    debug_outln_info(F("Checksum OK..."));
+				}
+                break;
+            }
+		}	
+}
+
+
 
 /*****************************************************************
  * disable unneeded NMEA sentences, TinyGPS++ needs GGA, RMC     *
@@ -2360,115 +2539,16 @@ static void fetchSensorNPM(String &s)
 	{
 		if (is_NPM_running)
 		{
-			uint8_t data[4];
 			debug_outln_info(F("Change NPM to stop..."));
-			NPM_cmd(PmSensorCmd2::Change);
-			NPM_waiting_for_4 = NPM_REPLY_CHECKSUM_4;
-
-			while (!serialNPM.available())
-			{
-				debug_outln("Wait for Serial...", DEBUG_MAX_INFO);
-			}
-
-
-
-
-
-
-
-			//________________________
-			while (serialNPM.available() > 0)
-			{
-				unsigned r = serialNPM.readBytes(data, sizeof(data));
-
-				if (r == sizeof(data) && NPM_checksum_valid_4(data))
-				{
-					NPM_data_reader(data, 4);
-					NPM_state(data[2]);
-
-					if (memcmp(data, answer_stop, 4) == 0)
-					{
-						debug_outln_info(F("Next PM Stop..."));
-					}
-					else
-						{
-							debug_outln_info(F("Next PM Stop degraded state..."));
-						}
-					is_NPM_running = false;
-					break;
-				}
-			}
-			//________________________
+			is_NPM_running = NPM_start_stop();
 		}
 	}
 	else
 	{
 		if (!is_NPM_running)
 		{
-			uint8_t data[4];
 			debug_outln_info(F("Change NPM to start..."));
-			NPM_cmd(PmSensorCmd2::Change);
-
-			while (!serialNPM.available())
-			{
-				debug_outln("Wait for Serial...", DEBUG_MAX_INFO);
-			}
-			while (serialNPM.available() > 0)
-			{
-				unsigned r = serialNPM.readBytes(data, sizeof(data));
-
-				if (r == sizeof(data) && NPM_checksum_valid_4(data))
-				{
-					NPM_data_reader(data, 4);
-					NPM_state(data[2]);
-
-					if (memcmp(data, answer_start, 4) == 0)
-					{
-						debug_outln_info(F("Next PM Start..."));
-						is_NPM_running = true;
-					}
-					//else if (data[0] == 0x81 && data[1] == 0x15 && data[2] != 0x00 && bitRead(data[2], 0) == 0)
-					else
-					{
-						debug_outln_info(F("Next PM start degraded state... Stop and new cycle..."));
-						uint8_t data[4];
-						NPM_cmd(PmSensorCmd2::Change);
-
-						while (!serialNPM.available())
-						{
-							debug_outln("Wait for Serial...", DEBUG_MAX_INFO);
-						}
-						while (serialNPM.available() > 0)
-						{
-							unsigned r = serialNPM.readBytes(data, sizeof(data));
-
-							if (r == sizeof(data) && NPM_checksum_valid_4(data))
-							{
-								NPM_data_reader(data, 4);
-								NPM_state(data[2]);
-
-								if (memcmp(data, answer_stop, 4) == 0)
-								{
-									debug_outln_info(F("Next PM Stop..."));
-								}
-									else
-						{
-							debug_outln_info(F("Next PM Stop degraded state..."));
-						}
-								break;
-							}
-						}
-						is_NPM_running = false;
-						npm_val_count = 0;
-						starttime = millis(); // to force sendnow false
-						delay(15000);		  // wait 5s for the NextPM
-						debug_outln_info(F("Wait for 15 seconds..."));
-
-						//break;
-					}
-					break;
-				}
-			}
+			is_NPM_running = NPM_start_stop();
 			NPM_waiting_for_16 = NPM_REPLY_HEADER_16;
 		}
 
@@ -2639,40 +2719,8 @@ static void fetchSensorNPM(String &s)
 		{
 			if (is_NPM_running)
 			{
-
-				uint8_t data[4];
 				debug_outln_info(F("Change NPM to stop after measure..."));
-				NPM_cmd(PmSensorCmd2::Change);
-
-				while (!serialNPM.available())
-				{
-					debug_outln("Wait for Serial...", DEBUG_MAX_INFO);
-				}
-				while (serialNPM.available() > 0)
-				{
-					unsigned r = serialNPM.readBytes(data, sizeof(data));
-
-					if (r == sizeof(data) && NPM_checksum_valid_4(data))
-					{
-
-						NPM_data_reader(data, 4);
-						NPM_state(data[2]);
-
-						if (memcmp(data, answer_stop, 4) == 0)
-						{
-							debug_outln_info(F("Next PM Stop..."));
-
-						}
-						else
-						{
-							debug_outln_info(F("Next PM Stop degraded state..."));
-
-						}
-							is_NPM_running = false;  //SORTIR DU WHILE
-							npm_val_count = 0;
-						break;
-					}
-				}
+				is_NPM_running = NPM_start_stop();
 			}
 		}
 	}
@@ -3040,140 +3088,60 @@ static void powerOnTestSensors()
 
 	if (cfg::npm_read)
 	{
-		delay(15000); //wait to be sure Next PM is ready to receive instructions.
-		uint8_t data[4];
-		debug_outln_info(F("State NPM..."));
-		NPM_cmd(PmSensorCmd2::State);
+		uint8_t test_state;
+		delay(15000); //wait a bit to be sure Next PM is ready to receive instructions.
+		test_state = NPM_get_state();
+		if (test_state == 0x00){
+			debug_outln_info(F("NPM already started..."));
+		}else if (test_state == 0x01){
+			debug_outln_info(F("Force start NPM...")); // to read the firmware version
+			is_NPM_running = NPM_start_stop();
+		}else {
+			if (bitRead(test_state, 1) == 1){
+				debug_outln_info(F("Degraded state"));
+			}else{
+				debug_outln_info(F("Default state"));
+			}
+			if (bitRead(test_state, 2) == 1){
+				debug_outln_info(F("Not ready"));
+			}
+			if (bitRead(test_state, 3) == 1){
+				debug_outln_info(F("Heat error"));
+			}
+			if (bitRead(test_state, 4) == 1){
+				debug_outln_info(F("T/RH error"));
+			}
+			if (bitRead(test_state, 5) == 1){
+				debug_outln_info(F("Fan error"));
 
-		while (!serialNPM.available())
-		{
-			debug_outln("Wait for Serial...", DEBUG_MAX_INFO);
-		}
-		while (serialNPM.available() > 0)
-		{
-
-			unsigned r = serialNPM.readBytes(data, sizeof(data));
-
-			if (r == sizeof(data) && NPM_checksum_valid_4(data))
-			{
-
-				NPM_data_reader(data, 4);
-
-				if (data[1] == 0x16 && bitRead(data[2], 0) == 1)
-				{
-					delay(1000);
-					uint8_t data[4];
-					debug_outln_info(F("Force Start NPM...")); // to read the firmware version
-					NPM_cmd(PmSensorCmd2::Change);
-
-					while (!serialNPM.available())
-					{
-						debug_outln("Wait for Serial...", DEBUG_MAX_INFO);
-					}
-
-					while (serialNPM.available() > 0)
-					{
-
-						unsigned r = serialNPM.readBytes(data, sizeof(data));
-
-						if (r == sizeof(data) && NPM_checksum_valid_4(data))
-						{
-
-							NPM_data_reader(data, 4);
-							NPM_state(data[2]);
-
-							if (memcmp(data, answer_start, 4) == 0)
-							{
-								debug_outln_info(F("Next PM Start..."));
-							}
-							else
-						{
-							debug_outln_info(F("Next PM Start degraded state..."));
-						
-						}
-							break;
-						}
-					}
-
-					delay(1000);
-					debug_outln_info(F("Read NPM version...: "), NPM_version_date());
-					delay(1000);
-					NPM_cmd(PmSensorCmd2::Change);
-					while (!serialNPM.available())
-					{
-						debug_outln("Wait for Serial...", DEBUG_MAX_INFO);
-					}
-
-					while (serialNPM.available() > 0)
-					{
-						unsigned r = serialNPM.readBytes(data, sizeof(data));
-
-						if (r == sizeof(data) && NPM_checksum_valid_4(data))
-						{
-							NPM_data_reader(data, 4);
-							NPM_state(data[2]);
-
-							if (memcmp(data, answer_stop, 4) == 0)
-							{
-								debug_outln_info(F("Next PM Stop..."));
-							}
-							else
-						{
-							debug_outln_info(F("Next PM Stop degraded state..."));
-							
-						}
-							break;
-						}
-					}
-					is_NPM_running = false;
-					debug_outln_info(F("Next PM is sleeping..."));
-				}
-				else if (data[1] == 0x16 && bitRead(data[2], 2) == 1)
-				{
-					debug_outln_info(F("Wait because not ready..."));
-					delay(5000);
-					is_NPM_running = false;
-				}
-				else if (data[1] == 0x16 && bitRead(data[2], 0) == 0)
-				{
-					delay(1000);
-					debug_outln_info(F("Next PM is on..."));
-					debug_outln_info(F("Read NPM version...: "), NPM_version_date());
-					delay(1000);
-					uint8_t data[4];
-					debug_outln_info(F("Force Stop NPM..."));
-					NPM_cmd(PmSensorCmd2::Change);
-					while (!serialNPM.available())
-					{
-						debug_outln("Wait for Serial...", DEBUG_MAX_INFO);
-					}
-
-					while (serialNPM.available() > 0)
-					{
-						unsigned r = serialNPM.readBytes(data, sizeof(data));
-
-						if (r == sizeof(data) && NPM_checksum_valid_4(data))
-						{
-							NPM_data_reader(data, 4);
-							NPM_state(data[2]);
-
-							if (memcmp(data, answer_stop, 4) == 0)
-							{
-								debug_outln_info(F("Next PM Stop..."));
-							}						
-							else
-						{
-							debug_outln_info(F("Next PM Stop degraded state..."));
-							
-						}	
-							break;
-						}
-					}
-					is_NPM_running = false;
-				}
-				break;
+				// if (bitRead(test_state, 0) == 1){
+				// 	debug_outln_info(F("Force start NPM..."));
+				// 	is_NPM_running = NPM_start_stop();
+				// 	delay(5000);
+				// }
+				// NPM_fan_speed();
+				// delay(5000);
+			}
+			if (bitRead(test_state, 6) == 1){
+				debug_outln_info(F("Memory error"));
+			}
+			if (bitRead(test_state, 7) == 1){
+				debug_outln_info(F("Laser error"));
+			}
+			if (bitRead(test_state, 0) == 0){
+				debug_outln_info(F("NPM already started..."));
+			}else{
+				//if(!is_NPM_running){
+				debug_outln_info(F("Force start NPM..."));
+				is_NPM_running = NPM_start_stop();
+			//}
 			}
 		}
+
+		delay(1000);
+		NPM_version_date();
+		delay(5000);
+		is_NPM_running = NPM_start_stop();
 	}
 
 	if (cfg::bmx280_read)
@@ -3278,6 +3246,25 @@ static unsigned long sendDataToOptionalApis(const String &data)
 	return sum_send_time;
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 /*****************************************************************
  * Helium LoRaWAN                  *
  *****************************************************************/
@@ -3304,6 +3291,8 @@ static u1_t PROGMEM deveui_hex[8] = {};
 // DANS LE MEME ORDRE
 static u1_t PROGMEM appkey_hex[16] = {};
 
+//DEPLACER LES MEMCPY!!!
+
 void os_getArtEui(u1_t *buf) { memcpy_P(buf, appeui_hex, 8); }
 
 void os_getDevEui(u1_t *buf) { memcpy_P(buf, deveui_hex, 8); }
@@ -3317,18 +3306,51 @@ static osjob_t sendjob;
 
 // Schedule TX every this many seconds (might become longer due to duty
 // cycle limitations).
-//const unsigned TX_INTERVAL = 60; // Replaced with cfg::time_send
+const unsigned TX_INTERVAL = cfg::sending_intervall_ms; // Replaced with cfg::time_send
 
-//For Generic ESP32 with Generic Lora
-#if defined(ESP32) and not defined(ARDUINO_HELTEC_WIFI_LORA_32_V2) and not defined(ARDUINO_TTGO_LoRa32_v21new)
-// Pin mapping
-const lmic_pinmap lmic_pins = {
-	.nss = 15,
-	.rxtx = LMIC_UNUSED_PIN,
-	.rst = LMIC_UNUSED_PIN,
-	.dio = {4, 5, LMIC_UNUSED_PIN},
-};
-#endif
+// //For Generic ESP32 with Generic Lora
+// #if defined(ESP32) and not defined(ARDUINO_HELTEC_WIFI_LORA_32_V2) and not defined(ARDUINO_TTGO_LoRa32_v21new)
+// // Pin mapping
+// const lmic_pinmap lmic_pins = {
+// 	.nss = 15,
+// 	.rxtx = LMIC_UNUSED_PIN,
+// 	.rst = LMIC_UNUSED_PIN,
+// 	.dio = {4, 5, LMIC_UNUSED_PIN},
+// };
+// #endif
+
+// #if defined(ARDUINO_HELTEC_WIFI_LORA_32_V2)
+// 			const lmic_pinmap lmic_pins = {
+//     		.nss = 18,
+//     		.rxtx = LMIC_UNUSED_PIN,
+//     		.rst = 14,
+//     		.dio = {26, 35, 34}
+// 			};
+
+// 			//const lmic_pinmap *pPinMap = &lmic_pins;
+
+// 			#endif
+
+// 			#if defined(ARDUINO_TTGO_LoRa32_v21new)
+			
+			
+
+// 			#endif
+
+// //OU AU DESSUS?
+// 			//For Generic ESP32 with Generic Lora
+// 			#if defined(ESP32) and not defined(ARDUINO_HELTEC_WIFI_LORA_32_V2) and not defined(ARDUINO_TTGO_LoRa32_v21new)
+// 			// Pin mapping
+// 			const lmic_pinmap lmic_pins = {
+// 				.nss = 15,
+// 				.rxtx = LMIC_UNUSED_PIN,
+// 				.rst = LMIC_UNUSED_PIN,
+// 				.dio = {4, 5, LMIC_UNUSED_PIN},
+// 			};
+
+// 			//const lmic_pinmap *pPinMap = &lmic_pins;
+
+// 			#endif
 
 void ToByteArray()
 {
@@ -3339,29 +3361,33 @@ void ToByteArray()
 	//  Debug.println(deveui_str);
 	//  Debug.println(appkey_str);
 
-	int j = 0;
-	int k = 0;
-	//int l = 0;
+	int j = 1;
+	int k = 1;
+	int l = 0;
+
+//6081F97B1A5B6763
 
 	for (unsigned int i = 0; i < appeui_str.length(); i += 2)
 	{
-		String byteString = appeui_str.substring(i, i + 2);
-		//  Debug.println(byteString);
+		String byteString = appeui_str.substring(i, i + 2); //ICI? 1
+		 //Debug.println(byteString);
 		byte byte = (char)strtol(byteString.c_str(), NULL, 16);
-		//  Debug.println(byte,HEX);
-		appeui_hex[(appeui_str.length() / 2) - 1 - j] = byte; //reverse
+		  //Debug.println(byte,HEX);
+		appeui_hex[(appeui_str.length() / 2) - j] = byte; //reverse
 		j += 1;
 	}
 
+//6081F922439D24D9
 	for (unsigned int i = 0; i < deveui_str.length(); i += 2)
 	{
 		String byteString = deveui_str.substring(i, i + 2);
 		//  Debug.println(byteString);
 		byte byte = (char)strtol(byteString.c_str(), NULL, 16);
 		//  Debug.println(byte, HEX);
-		deveui_hex[(deveui_str.length() / 2) - 1 - k] = byte; //reverse
+		deveui_hex[(deveui_str.length() / 2) - k] = byte; //reverse
 		k += 1;
 	}
+//CA2228AE0CC86C6E3177A98DCDF0DCBB
 
 	for (unsigned int i = 0; i < appkey_str.length(); i += 2)
 	{
@@ -3370,8 +3396,8 @@ void ToByteArray()
 		byte byte = (char)strtol(byteString.c_str(), NULL, 16);
 		//  Debug.println(byte, HEX);
 		//appkey_hex[(appkey_str.length() / 2) - 1 - l] = byte; // reverse
-		appkey_hex[i] = byte; //not reverse
-							  //l += 1;
+		appkey_hex[l] = byte; //not reverse
+		l += 1;
 	}
 }
 
@@ -3495,7 +3521,7 @@ void onEvent(ev_t ev)
 			Debug.println(F(" bytes of payload"));
 		}
 		// Schedule next transmission
-		os_setTimedCallback(&sendjob, os_getTime() + sec2osticks(cfg::sending_intervall_ms), do_send);
+		os_setTimedCallback(&sendjob, os_getTime() + sec2osticks(TX_INTERVAL), do_send);
 		break;
 	case EV_LOST_TSYNC:
 		Debug.println(F("EV_LOST_TSYNC"));
@@ -3642,10 +3668,10 @@ static void prepareTxFrame()
 		datalora_npm[23] = u.temp_byte[3];
 
 		Debug.printf("HEX values:\n");
-		for (int i = 0; i < 20; i++)
+		for (int i = 0; i < 24; i++)
 		{
 			Debug.printf(" %02x", datalora_npm[i]);
-			if (i == 19)
+			if (i == 23)
 			{
 				Debug.printf("\n");
 			}
@@ -3678,7 +3704,7 @@ void setup(void)
 
 	init_config();
 
-#if not defined(ARDUINO_TTGO_LoRa32_v21new) and not defined(ARDUINO_TTGO_LoRa32_v21new)
+#if defined(ESP32) and not defined(ARDUINO_HELTEC_WIFI_LORA_32_V2) and not defined(ARDUINO_TTGO_LoRa32_v21new)
 	Wire.begin(I2C_PIN_SDA, I2C_PIN_SCL);
 #endif
 
@@ -3834,9 +3860,37 @@ void setup(void)
 
 		if (!strcmp(cfg::appeui, "0000000000000000") && !strcmp(cfg::deveui, "0000000000000000") && !strcmp(cfg::appkey, "00000000000000000000000000000000"))
 		{
-			const lmic_pinmap *pPinMap = Arduino_LMIC::GetPinmap_ThisBoard();
-			os_init_ex(pPinMap);
+
+			#if defined(ARDUINO_HELTEC_WIFI_LORA_32_V2) or defined(ARDUINO_TTGO_LoRa32_v21new)
+			
+			
+			//const lmic_pinmap *pPinMap = Arduino_LMIC::GetPinmap_ThisBoard();
+			auto* pinMap = Arduino_LMIC::GetPinmap_ThisBoard();
+
+
+
+
+
+			#endif
+
+		
+
+
+
+			// if (pPinMap == nullptr) {
+       
+            // Debug.println(F("Board not known to library; add pinmap or update getconfig_thisboard.cpp"));
+        
+    		// 	}
+
+			//Debug.println(pPinMap);
+			
+			//os_init_ex(pPinMap);
+			os_init_ex(pinMap);
 			// Reset the MAC state. Session and pending data transfers will be discarded.
+
+ 			//os_init();
+
 
 			LMIC_reset();
 			// allow much more clock error than the X/1000 default. See:
@@ -3853,7 +3907,11 @@ void setup(void)
 			// minimizes air time and battery power. Set the transmission power to 14 dBi (25 mW).
 
 			// Start job (sending automatically starts OTAA too)
-			do_send(&sendjob); //ATTENTION PREMIER START!!!!!
+			do_send(&sendjob); 
+			
+			
+			
+			//ATTENTION PREMIER START!!!!!
 		}
 	}
 }
