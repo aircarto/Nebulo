@@ -1,3 +1,4 @@
+// Un super code
 
 #include <WString.h>
 #include <pgmspace.h>
@@ -69,7 +70,7 @@ namespace cfg
 	char fs_ssid[LEN_FS_SSID] = FS_SSID;
 	char fs_pwd[LEN_CFG_PASSWORD] = FS_PWD;
 
-	//main config
+	// main config
 
 	bool has_wifi = HAS_WIFI;
 	bool has_lora = HAS_LORA;
@@ -102,7 +103,7 @@ namespace cfg
 	bool ssl_madavi = SSL_MADAVI;
 	bool ssl_dusti = SSL_SENSORCOMMUNITY;
 
-	//API AirCarto
+	// API AirCarto
 	char host_custom[LEN_HOST_CUSTOM];
 	char url_custom[LEN_URL_CUSTOM];
 	bool ssl_custom = SSL_CUSTOM;
@@ -110,7 +111,7 @@ namespace cfg
 	char user_custom[LEN_USER_CUSTOM] = USER_CUSTOM;
 	char pwd_custom[LEN_CFG_PASSWORD] = PWD_CUSTOM;
 
-	//API AtmoSud
+	// API AtmoSud
 	char host_custom2[LEN_HOST_CUSTOM2];
 	char url_custom2[LEN_URL_CUSTOM2];
 	bool ssl_custom2 = SSL_CUSTOM2;
@@ -118,7 +119,7 @@ namespace cfg
 	char user_custom2[LEN_USER_CUSTOM2] = USER_CUSTOM2;
 	char pwd_custom2[LEN_CFG_PASSWORD] = PWD_CUSTOM2;
 
-	//First load
+	// First load
 	void initNonTrivials(const char *id)
 	{
 		strcpy(cfg::current_lang, CURRENT_LANG);
@@ -134,7 +135,7 @@ namespace cfg
 		strcpy_P(host_custom2, HOST_CUSTOM2);
 		strcpy_P(url_custom2, URL_CUSTOM2);
 
-		//AJOUTER LORA ICI?
+		// AJOUTER LORA ICI?
 
 		if (!*fs_ssid)
 		{
@@ -145,7 +146,7 @@ namespace cfg
 }
 
 // define size of the config JSON
-#define JSON_BUFFER_SIZE 2300 //REVOIR LA TAILLE
+#define JSON_BUFFER_SIZE 2300 // REVOIR LA TAILLE
 
 LoggerConfig loggerConfigs[LoggerCount];
 
@@ -164,14 +165,14 @@ WebServer server(80);
  * Display definitions                                           *
  *****************************************************************/
 
-SSD1306Wire *oled_ssd1306 = nullptr; //as pointer
+SSD1306Wire *oled_ssd1306 = nullptr; // as pointer
 
 /*****************************************************************
  * Serial declarations                                           *
  *****************************************************************/
 
 #define serialSDS (Serial1)
-#define serialGPS (&(Serial2)) //as pointer
+#define serialGPS (&(Serial2)) // as pointer
 #define serialNPM (Serial1)
 
 /*****************************************************************
@@ -198,7 +199,7 @@ unsigned long last_micro = 0;
 unsigned long min_micro = 1000000000;
 unsigned long max_micro = 0;
 
-//bool is_SDS_running = true;
+// bool is_SDS_running = true;
 bool is_SDS_running;
 
 // To read SDS responses
@@ -218,14 +219,14 @@ enum
 	NPM_REPLY_STATE_16 = 14,
 	NPM_REPLY_BODY_16 = 13,
 	NPM_REPLY_CHECKSUM_16 = 1
-} NPM_waiting_for_16;  //for concentration
+} NPM_waiting_for_16; // for concentration
 
 enum
 {
 	NPM_REPLY_HEADER_4 = 4,
 	NPM_REPLY_STATE_4 = 2,
 	NPM_REPLY_CHECKSUM_4 = 1
-} NPM_waiting_for_4; //for change
+} NPM_waiting_for_4; // for change
 
 enum
 {
@@ -233,7 +234,7 @@ enum
 	NPM_REPLY_STATE_5 = 3,
 	NPM_REPLY_DATA_5 = 2,
 	NPM_REPLY_CHECKSUM_5 = 1
-} NPM_waiting_for_5; //for fan speed
+} NPM_waiting_for_5; // for fan speed
 
 enum
 {
@@ -298,9 +299,9 @@ String last_data_string;
 int last_signal_strength;
 int last_disconnect_reason;
 
-//chipID variables
+// chipID variables
 String esp_chipid;
-//String esp_mac_id;
+// String esp_mac_id;
 String last_value_SDS_version;
 String last_value_NPM_version;
 
@@ -402,226 +403,231 @@ static String SDS_version_date()
 	return last_value_SDS_version;
 }
 
-
 /*****************************************************************
  * NPM functions     *
  *****************************************************************/
 
-static uint8_t NPM_get_state(){
-		uint8_t result;
-		NPM_waiting_for_4 = NPM_REPLY_HEADER_4;
-		debug_outln_info(F("State NPM..."));
-		NPM_cmd(PmSensorCmd2::State);
+static uint8_t NPM_get_state()
+{
+	uint8_t result;
+	NPM_waiting_for_4 = NPM_REPLY_HEADER_4;
+	debug_outln_info(F("State NPM..."));
+	NPM_cmd(PmSensorCmd2::State);
 
-		while (!serialNPM.available())
+	while (!serialNPM.available())
+	{
+		debug_outln("Wait for Serial...", DEBUG_MAX_INFO);
+	}
+
+	while (serialNPM.available() >= NPM_waiting_for_4)
+	{
+		const uint8_t constexpr header[2] = {0x81, 0x16};
+		uint8_t state[1];
+		uint8_t checksum[1];
+		uint8_t test[4];
+
+		switch (NPM_waiting_for_4)
 		{
-			debug_outln("Wait for Serial...", DEBUG_MAX_INFO);
+		case NPM_REPLY_HEADER_4:
+			if (serialNPM.find(header, sizeof(header)))
+				NPM_waiting_for_4 = NPM_REPLY_STATE_4;
+			break;
+		case NPM_REPLY_STATE_4:
+			serialNPM.readBytes(state, sizeof(state));
+			NPM_state(state[0]);
+			result = state[0];
+			NPM_waiting_for_4 = NPM_REPLY_CHECKSUM_4;
+			break;
+		case NPM_REPLY_CHECKSUM_4:
+			serialNPM.readBytes(checksum, sizeof(checksum));
+			memcpy(test, header, sizeof(header));
+			memcpy(&test[sizeof(header)], state, sizeof(state));
+			memcpy(&test[sizeof(header) + sizeof(state)], checksum, sizeof(checksum));
+			NPM_data_reader(test, 4);
+			NPM_waiting_for_4 = NPM_REPLY_HEADER_4;
+			if (NPM_checksum_valid_4(test))
+			{
+				debug_outln_info(F("Checksum OK..."));
+			}
+			break;
 		}
-
-        while (serialNPM.available() >= NPM_waiting_for_4)
-        {
-            const uint8_t constexpr header[2] = {0x81, 0x16};
-            uint8_t state[1];
-            uint8_t checksum[1];
-            uint8_t test[4];
-
-            switch (NPM_waiting_for_4)
-            {
-            case NPM_REPLY_HEADER_4:
-                if (serialNPM.find(header, sizeof(header)))
-                    NPM_waiting_for_4 = NPM_REPLY_STATE_4;
-                break;
-            case NPM_REPLY_STATE_4:
-                serialNPM.readBytes(state, sizeof(state));
-                NPM_state(state[0]);
-				result = state[0];
-                NPM_waiting_for_4 = NPM_REPLY_CHECKSUM_4;
-                break;
-            case NPM_REPLY_CHECKSUM_4:
-                serialNPM.readBytes(checksum, sizeof(checksum));
-                memcpy(test, header, sizeof(header));
-                memcpy(&test[sizeof(header)], state, sizeof(state));
-                memcpy(&test[sizeof(header) + sizeof(state)], checksum, sizeof(checksum));
-                NPM_data_reader(test, 4);
-				NPM_waiting_for_4 = NPM_REPLY_HEADER_4;
-                if (NPM_checksum_valid_4(test)){
-                    debug_outln_info(F("Checksum OK..."));	
-				}
-                break;
-            }
-        }
-		return result;
+	}
+	return result;
 }
 
-static bool NPM_start_stop(){
-		bool result;
-		NPM_waiting_for_4 = NPM_REPLY_HEADER_4;
-		debug_outln_info(F("Switch start/stop NPM..."));
-		NPM_cmd(PmSensorCmd2::Change);
+static bool NPM_start_stop()
+{
+	bool result;
+	NPM_waiting_for_4 = NPM_REPLY_HEADER_4;
+	debug_outln_info(F("Switch start/stop NPM..."));
+	NPM_cmd(PmSensorCmd2::Change);
 
-		while (!serialNPM.available())
+	while (!serialNPM.available())
+	{
+		debug_outln("Wait for Serial...", DEBUG_MAX_INFO);
+	}
+
+	while (serialNPM.available() >= NPM_waiting_for_4)
+	{
+		const uint8_t constexpr header[2] = {0x81, 0x15};
+		uint8_t state[1];
+		uint8_t checksum[1];
+		uint8_t test[4];
+
+		switch (NPM_waiting_for_4)
 		{
-			debug_outln("Wait for Serial...", DEBUG_MAX_INFO);
-		}
+		case NPM_REPLY_HEADER_4:
+			if (serialNPM.find(header, sizeof(header)))
+				NPM_waiting_for_4 = NPM_REPLY_STATE_4;
+			break;
+		case NPM_REPLY_STATE_4:
+			serialNPM.readBytes(state, sizeof(state));
+			NPM_state(state[0]);
 
-        while (serialNPM.available() >= NPM_waiting_for_4)
-        {
-            const uint8_t constexpr header[2] = {0x81, 0x15};
-            uint8_t state[1];
-            uint8_t checksum[1];
-            uint8_t test[4];
-
-            switch (NPM_waiting_for_4)
-            {
-            case NPM_REPLY_HEADER_4:
-                if (serialNPM.find(header, sizeof(header)))
-                    NPM_waiting_for_4 = NPM_REPLY_STATE_4;
-                break;
-            case NPM_REPLY_STATE_4:
-                serialNPM.readBytes(state, sizeof(state));
-                NPM_state(state[0]);
-
-				if (bitRead(state[0], 0) == 0){
+			if (bitRead(state[0], 0) == 0)
+			{
 				debug_outln_info(F("NPM start..."));
-						result = true;
-				}else{
-				debug_outln_info(F("NPM stop..."));	
-						result = false;
-				}
+				result = true;
+			}
+			else
+			{
+				debug_outln_info(F("NPM stop..."));
+				result = false;
+			}
 
-
-                NPM_waiting_for_4 = NPM_REPLY_CHECKSUM_4;
-                break;
-            case NPM_REPLY_CHECKSUM_4:
-                serialNPM.readBytes(checksum, sizeof(checksum));
-                memcpy(test, header, sizeof(header));
-                memcpy(&test[sizeof(header)], state, sizeof(state));
-                memcpy(&test[sizeof(header) + sizeof(state)], checksum, sizeof(checksum));
-                NPM_data_reader(test, 4);
-				NPM_waiting_for_4 = NPM_REPLY_HEADER_4;
-                if (NPM_checksum_valid_4(test)){
-                    debug_outln_info(F("Checksum OK..."));
-				}
-                break;
-            }
-        }
-return result; //ATTENTION
+			NPM_waiting_for_4 = NPM_REPLY_CHECKSUM_4;
+			break;
+		case NPM_REPLY_CHECKSUM_4:
+			serialNPM.readBytes(checksum, sizeof(checksum));
+			memcpy(test, header, sizeof(header));
+			memcpy(&test[sizeof(header)], state, sizeof(state));
+			memcpy(&test[sizeof(header) + sizeof(state)], checksum, sizeof(checksum));
+			NPM_data_reader(test, 4);
+			NPM_waiting_for_4 = NPM_REPLY_HEADER_4;
+			if (NPM_checksum_valid_4(test))
+			{
+				debug_outln_info(F("Checksum OK..."));
+			}
+			break;
+		}
+	}
+	return result; // ATTENTION
 }
 
 static void NPM_version_date()
 {
-		//debug_outln_verbose(FPSTR(DBG_TXT_START_READING), FPSTR(DBG_TXT_NPM_VERSION_DATE));
-		delay(250);
-		NPM_waiting_for_6 = NPM_REPLY_HEADER_6;
-		debug_outln_info(F("Version NPM..."));
-		NPM_cmd(PmSensorCmd2::Version);
+	// debug_outln_verbose(FPSTR(DBG_TXT_START_READING), FPSTR(DBG_TXT_NPM_VERSION_DATE));
+	delay(250);
+	NPM_waiting_for_6 = NPM_REPLY_HEADER_6;
+	debug_outln_info(F("Version NPM..."));
+	NPM_cmd(PmSensorCmd2::Version);
 
-		while (!serialNPM.available())
+	while (!serialNPM.available())
+	{
+		debug_outln("Wait for Serial...", DEBUG_MAX_INFO);
+	}
+
+	while (serialNPM.available() >= NPM_waiting_for_6)
+	{
+		const uint8_t constexpr header[2] = {0x81, 0x17};
+		uint8_t state[1];
+		uint8_t data[2];
+		uint8_t checksum[1];
+		uint8_t test[6];
+
+		switch (NPM_waiting_for_6)
 		{
-			debug_outln("Wait for Serial...", DEBUG_MAX_INFO);
-		}
-
-		while (serialNPM.available() >= NPM_waiting_for_6)
-		{
-         	const uint8_t constexpr header[2] = {0x81, 0x17};
-            uint8_t state[1];
-            uint8_t data[2];
-            uint8_t checksum[1];
-            uint8_t test[6];
-
-switch (NPM_waiting_for_6)
-            {
-            case NPM_REPLY_HEADER_6:
-                if (serialNPM.find(header, sizeof(header)))
-                    NPM_waiting_for_6 = NPM_REPLY_STATE_6;
-                break;
-            case NPM_REPLY_STATE_6:
-                serialNPM.readBytes(state, sizeof(state));
-                NPM_state(state[0]);
-                NPM_waiting_for_6 = NPM_REPLY_DATA_6;
-                break;
-          case NPM_REPLY_DATA_6:
- if (serialNPM.readBytes(data, sizeof(data)) == sizeof(data)){
+		case NPM_REPLY_HEADER_6:
+			if (serialNPM.find(header, sizeof(header)))
+				NPM_waiting_for_6 = NPM_REPLY_STATE_6;
+			break;
+		case NPM_REPLY_STATE_6:
+			serialNPM.readBytes(state, sizeof(state));
+			NPM_state(state[0]);
+			NPM_waiting_for_6 = NPM_REPLY_DATA_6;
+			break;
+		case NPM_REPLY_DATA_6:
+			if (serialNPM.readBytes(data, sizeof(data)) == sizeof(data))
+			{
 				NPM_data_reader(data, 2);
 				uint16_t NPMversion = word(data[0], data[1]);
 				last_value_NPM_version = String(NPMversion);
-				//debug_outln_verbose(FPSTR(DBG_TXT_END_READING), FPSTR(DBG_TXT_NPM_VERSION_DATE));
+				// debug_outln_verbose(FPSTR(DBG_TXT_END_READING), FPSTR(DBG_TXT_NPM_VERSION_DATE));
 				debug_outln_info(F("Next PM Firmware: "), last_value_NPM_version);
- }
-                NPM_waiting_for_6 = NPM_REPLY_CHECKSUM_6;
-                break;
-            case NPM_REPLY_CHECKSUM_6:
-                serialNPM.readBytes(checksum, sizeof(checksum));
-                memcpy(test, header, sizeof(header));
-                memcpy(&test[sizeof(header)], state, sizeof(state));
-                memcpy(&test[sizeof(header) + sizeof(state)], data, sizeof(data));
-				memcpy(&test[sizeof(header) + sizeof(state) + sizeof(data)], checksum, sizeof(checksum));
-                NPM_data_reader(test, 6);
-				NPM_waiting_for_6 = NPM_REPLY_HEADER_6;
-                if (NPM_checksum_valid_6(test)){
-                    debug_outln_info(F("Checksum OK..."));
-				}
-                break;
-            }
-		}	
+			}
+			NPM_waiting_for_6 = NPM_REPLY_CHECKSUM_6;
+			break;
+		case NPM_REPLY_CHECKSUM_6:
+			serialNPM.readBytes(checksum, sizeof(checksum));
+			memcpy(test, header, sizeof(header));
+			memcpy(&test[sizeof(header)], state, sizeof(state));
+			memcpy(&test[sizeof(header) + sizeof(state)], data, sizeof(data));
+			memcpy(&test[sizeof(header) + sizeof(state) + sizeof(data)], checksum, sizeof(checksum));
+			NPM_data_reader(test, 6);
+			NPM_waiting_for_6 = NPM_REPLY_HEADER_6;
+			if (NPM_checksum_valid_6(test))
+			{
+				debug_outln_info(F("Checksum OK..."));
+			}
+			break;
+		}
+	}
 }
-
-
 
 static void NPM_fan_speed()
 {
 
-		NPM_waiting_for_5 = NPM_REPLY_HEADER_5;
-		debug_outln_info(F("Set fan speed to 50 %..."));
-		NPM_cmd(PmSensorCmd2::Speed);
+	NPM_waiting_for_5 = NPM_REPLY_HEADER_5;
+	debug_outln_info(F("Set fan speed to 50 %..."));
+	NPM_cmd(PmSensorCmd2::Speed);
 
-		while (!serialNPM.available())
+	while (!serialNPM.available())
+	{
+		debug_outln("Wait for Serial...", DEBUG_MAX_INFO);
+	}
+
+	while (serialNPM.available() >= NPM_waiting_for_5)
+	{
+		const uint8_t constexpr header[2] = {0x81, 0x21};
+		uint8_t state[1];
+		uint8_t data[1];
+		uint8_t checksum[1];
+		uint8_t test[5];
+
+		switch (NPM_waiting_for_5)
 		{
-			debug_outln("Wait for Serial...", DEBUG_MAX_INFO);
-		}
-
-		while (serialNPM.available() >= NPM_waiting_for_5)
-		{
-         const uint8_t constexpr header[2] = {0x81, 0x21};
-            uint8_t state[1];
-            uint8_t data[1];
-            uint8_t checksum[1];
-            uint8_t test[5];
-
-switch (NPM_waiting_for_5)
-            {
-            case NPM_REPLY_HEADER_5:
-                if (serialNPM.find(header, sizeof(header)))
-                    NPM_waiting_for_5 = NPM_REPLY_STATE_5;
-                break;
-            case NPM_REPLY_STATE_5:
-                serialNPM.readBytes(state, sizeof(state));
-                NPM_state(state[0]);
-                NPM_waiting_for_5 = NPM_REPLY_DATA_5;
-                break;
-          case NPM_REPLY_DATA_5:
- if (serialNPM.readBytes(data, sizeof(data)) == sizeof(data)){
+		case NPM_REPLY_HEADER_5:
+			if (serialNPM.find(header, sizeof(header)))
+				NPM_waiting_for_5 = NPM_REPLY_STATE_5;
+			break;
+		case NPM_REPLY_STATE_5:
+			serialNPM.readBytes(state, sizeof(state));
+			NPM_state(state[0]);
+			NPM_waiting_for_5 = NPM_REPLY_DATA_5;
+			break;
+		case NPM_REPLY_DATA_5:
+			if (serialNPM.readBytes(data, sizeof(data)) == sizeof(data))
+			{
 				NPM_data_reader(data, 1);
- }
-                NPM_waiting_for_5 = NPM_REPLY_CHECKSUM_5;
-                break;
-            case NPM_REPLY_CHECKSUM_5:
-                serialNPM.readBytes(checksum, sizeof(checksum));
-                memcpy(test, header, sizeof(header));
-                memcpy(&test[sizeof(header)], state, sizeof(state));
-                memcpy(&test[sizeof(header) + sizeof(state)], data, sizeof(data));
-				memcpy(&test[sizeof(header) + sizeof(state) + sizeof(data)], checksum, sizeof(checksum));
-                NPM_data_reader(test, 5);
-				NPM_waiting_for_5 = NPM_REPLY_HEADER_5;
-                if (NPM_checksum_valid_5(test)){
-                    debug_outln_info(F("Checksum OK..."));
-				}
-                break;
-            }
-		}	
+			}
+			NPM_waiting_for_5 = NPM_REPLY_CHECKSUM_5;
+			break;
+		case NPM_REPLY_CHECKSUM_5:
+			serialNPM.readBytes(checksum, sizeof(checksum));
+			memcpy(test, header, sizeof(header));
+			memcpy(&test[sizeof(header)], state, sizeof(state));
+			memcpy(&test[sizeof(header) + sizeof(state)], data, sizeof(data));
+			memcpy(&test[sizeof(header) + sizeof(state) + sizeof(data)], checksum, sizeof(checksum));
+			NPM_data_reader(test, 5);
+			NPM_waiting_for_5 = NPM_REPLY_HEADER_5;
+			if (NPM_checksum_valid_5(test))
+			{
+				debug_outln_info(F("Checksum OK..."));
+			}
+			break;
+		}
+	}
 }
-
-
 
 /*****************************************************************
  * disable unneeded NMEA sentences, TinyGPS++ needs GGA, RMC     *
@@ -906,8 +912,8 @@ static void start_html_page(String &page_content, const String &title)
 		s.replace("{n}", emptyString);
 	}
 	s.replace("{id}", esp_chipid);
-	//s.replace("{macid}", esp_mac_id);
-	//s.replace("{mac}", WiFi.macAddress());
+	// s.replace("{macid}", esp_mac_id);
+	// s.replace("{mac}", WiFi.macAddress());
 	page_content += s;
 }
 
@@ -1186,7 +1192,7 @@ static void webserver_config_send_body_get(String &page_content)
 	server.sendContent(page_content);
 	page_content = tmpl(FPSTR(WEB_DIV_PANEL), String(3));
 
-	//add_form_checkbox(Config_has_display, FPSTR(INTL_DISPLAY));
+	// add_form_checkbox(Config_has_display, FPSTR(INTL_DISPLAY));
 	add_form_checkbox(Config_has_ssd1306, FPSTR(INTL_SSD1306));
 
 	// Paginate page after ~ 1500 Bytes
@@ -1472,7 +1478,7 @@ static void webserver_wifi()
 		page_content += FPSTR(BR_TAG);
 		page_content += FPSTR(BR_TAG);
 		page_content += FPSTR(TABLE_TAG_OPEN);
-		//if (n > 30) n=30;
+		// if (n > 30) n=30;
 		for (int i = 0; i < count_wifiInfo; ++i)
 		{
 			if (indices[i] == -1)
@@ -1807,7 +1813,7 @@ static void webserver_removeConfig()
 		// Silently remove the desaster backup
 		SPIFFS.remove(F("/config.json.old"));
 		if (SPIFFS.exists(F("/config.json")))
-		{ //file exists
+		{ // file exists
 			debug_outln_info(F("removing config.json..."));
 			if (SPIFFS.remove(F("/config.json")))
 			{
@@ -2023,7 +2029,7 @@ static void setup_webserver()
 	server.on(F(STATIC_PREFIX), webserver_static);
 	server.onNotFound(webserver_not_found);
 
-	//debug_outln_info(F("Starting Webserver... "), WiFi.localIP().toString());
+	// debug_outln_info(F("Starting Webserver... "), WiFi.localIP().toString());
 	debug_outln_info(F("Starting Webserver... "));
 	server.begin();
 }
@@ -2130,7 +2136,7 @@ static void wifiConfig()
 	wifi.nchan = 13;
 	wifi.schan = 1;
 
-	//The station mode starts only if WiFi communication is enabled.
+	// The station mode starts only if WiFi communication is enabled.
 
 	if (cfg::has_wifi)
 	{
@@ -2161,10 +2167,10 @@ static void wifiConfig()
 	debug_outln_info_bool(F("AirCarto: "), cfg::send2custom);
 	debug_outln_info_bool(F("AtmoSud: "), cfg::send2custom2);
 	debug_outln_info(FPSTR(DBG_TXT_SEP));
-	//debug_outln_info_bool(F("Display: "), cfg::has_display);
+	// debug_outln_info_bool(F("Display: "), cfg::has_display);
 	debug_outln_info_bool(F("Display: "), cfg::has_ssd1306);
 	debug_outln_info(F("Debug: "), String(cfg::debug));
-	wificonfig_loop = false; //VOIR ICI
+	wificonfig_loop = false; // VOIR ICI
 }
 
 static void waitForWifiToConnect(int maxRetries)
@@ -2182,7 +2188,7 @@ static void waitForWifiToConnect(int maxRetries)
  * WiFi auto connecting script                                   *
  *****************************************************************/
 
-//static WiFiEventHandler disconnectEventHandler;
+// static WiFiEventHandler disconnectEventHandler;
 
 static void connectWifi()
 {
@@ -2288,7 +2294,7 @@ static unsigned long sendData(const LoggerEntry logger, const String &data, cons
 	{
 		http.addHeader(F("Content-Type"), contentType);
 		http.addHeader(F("X-Sensor"), String(F(SENSOR_BASENAME)) + esp_chipid);
-		//http.addHeader(F("X-MAC-ID"), String(F(SENSOR_BASENAME)) + esp_mac_id);
+		// http.addHeader(F("X-MAC-ID"), String(F(SENSOR_BASENAME)) + esp_mac_id);
 		if (pin)
 		{
 			http.addHeader(F("X-PIN"), String(pin));
@@ -2408,7 +2414,7 @@ static void fetchSensorBMX280(String &s)
 	}
 	else
 	{
-		//last_value_BMX280_T = t + readCorrectionOffset(cfg::temp_correction);
+		// last_value_BMX280_T = t + readCorrectionOffset(cfg::temp_correction);
 		last_value_BMX280_T = t;
 		last_value_BMX280_P = p;
 		if (bmx280.sensorID() == BME280_SENSOR_ID)
@@ -2534,7 +2540,7 @@ static void fetchSensorSDS(String &s)
 static void fetchSensorNPM(String &s)
 {
 
-	//debug_outln_verbose(FPSTR(DBG_TXT_START_READING), FPSTR(SENSORS_NPM));
+	// debug_outln_verbose(FPSTR(DBG_TXT_START_READING), FPSTR(SENSORS_NPM));
 	if (cfg::sending_intervall_ms > (WARMUPTIME_NPM_MS + READINGTIME_NPM_MS) && msSince(starttime) < (cfg::sending_intervall_ms - (WARMUPTIME_NPM_MS + READINGTIME_NPM_MS)))
 	{
 		if (is_NPM_running)
@@ -2552,49 +2558,49 @@ static void fetchSensorNPM(String &s)
 			NPM_waiting_for_16 = NPM_REPLY_HEADER_16;
 		}
 
-	//if (){}
-		if (msSince(starttime) > (cfg::sending_intervall_ms - READINGTIME_NPM_MS)){ //DIMINUER LE READING TIME
+		// if (){}
+		if (msSince(starttime) > (cfg::sending_intervall_ms - READINGTIME_NPM_MS))
+		{ // DIMINUER LE READING TIME
 
-		debug_outln_info(F("Concentration NPM..."));
-		NPM_cmd(PmSensorCmd2::Concentration);
-		while (!serialNPM.available())
-		{
-			debug_outln("Wait for Serial...", DEBUG_MAX_INFO);
-		}
-
-		while (serialNPM.available() >= NPM_waiting_for_16)
-		{
-			const uint8_t constexpr header[2] = {0x81, 0x11};
-			uint8_t state[1];
-			uint8_t data[12];
-			uint8_t checksum[1];
-			uint8_t test[16];
-
-			switch (NPM_waiting_for_16)
+			debug_outln_info(F("Concentration NPM..."));
+			NPM_cmd(PmSensorCmd2::Concentration);
+			while (!serialNPM.available())
 			{
-			case NPM_REPLY_HEADER_16:
-				if (serialNPM.find(header, sizeof(header)))
-					NPM_waiting_for_16 = NPM_REPLY_STATE_16;
-				break;
-			case NPM_REPLY_STATE_16:
-				serialNPM.readBytes(state, sizeof(state));
-				NPM_state(state[0]);
-				NPM_waiting_for_16 = NPM_REPLY_BODY_16;
-				break;
-			case NPM_REPLY_BODY_16:
-				if (serialNPM.readBytes(data, sizeof(data)) == sizeof(data))
+				debug_outln("Wait for Serial...", DEBUG_MAX_INFO);
+			}
+
+			while (serialNPM.available() >= NPM_waiting_for_16)
+			{
+				const uint8_t constexpr header[2] = {0x81, 0x11};
+				uint8_t state[1];
+				uint8_t data[12];
+				uint8_t checksum[1];
+				uint8_t test[16];
+
+				switch (NPM_waiting_for_16)
 				{
-					NPM_data_reader(data, 12);
-					uint16_t N1_serial = word(data[0], data[1]);
-					uint16_t N25_serial = word(data[2], data[3]);
-					uint16_t N10_serial = word(data[4], data[5]);
+				case NPM_REPLY_HEADER_16:
+					if (serialNPM.find(header, sizeof(header)))
+						NPM_waiting_for_16 = NPM_REPLY_STATE_16;
+					break;
+				case NPM_REPLY_STATE_16:
+					serialNPM.readBytes(state, sizeof(state));
+					NPM_state(state[0]);
+					NPM_waiting_for_16 = NPM_REPLY_BODY_16;
+					break;
+				case NPM_REPLY_BODY_16:
+					if (serialNPM.readBytes(data, sizeof(data)) == sizeof(data))
+					{
+						NPM_data_reader(data, 12);
+						uint16_t N1_serial = word(data[0], data[1]);
+						uint16_t N25_serial = word(data[2], data[3]);
+						uint16_t N10_serial = word(data[4], data[5]);
 
-					uint16_t pm1_serial = word(data[6], data[7]);
-					uint16_t pm25_serial = word(data[8], data[9]);
-					uint16_t pm10_serial = word(data[10], data[11]);
+						uint16_t pm1_serial = word(data[6], data[7]);
+						uint16_t pm25_serial = word(data[8], data[9]);
+						uint16_t pm10_serial = word(data[10], data[11]);
 
-					//if (msSince(starttime) > (cfg::sending_intervall_ms - READINGTIME_NPM_MS)){
-					
+						// if (msSince(starttime) > (cfg::sending_intervall_ms - READINGTIME_NPM_MS)){
 
 						debug_outln_verbose(F("PM1 (μg/m3) : "), String(pm1_serial / 10.0f));
 						debug_outln_verbose(F("PM2.5 (μg/m3): "), String(pm25_serial / 10.0f));
@@ -2623,24 +2629,24 @@ static void fetchSensorNPM(String &s)
 						debug_outln_info(F("Next PM Measure..."));
 						npm_val_count++;
 						debug_outln(String(npm_val_count), DEBUG_MAX_INFO);
-					//}
+						//}
+					}
+					NPM_waiting_for_16 = NPM_REPLY_CHECKSUM_16;
+					break;
+				case NPM_REPLY_CHECKSUM_16:
+					serialNPM.readBytes(checksum, sizeof(checksum));
+					memcpy(test, header, sizeof(header));
+					memcpy(&test[sizeof(header)], state, sizeof(state));
+					memcpy(&test[sizeof(header) + sizeof(state)], data, sizeof(data));
+					memcpy(&test[sizeof(header) + sizeof(state) + sizeof(data)], checksum, sizeof(checksum));
+					NPM_data_reader(test, 16);
+					if (NPM_checksum_valid_16(test))
+						debug_outln_info(F("Checksum OK..."));
+					NPM_waiting_for_16 = NPM_REPLY_HEADER_16;
+					break;
 				}
-				NPM_waiting_for_16 = NPM_REPLY_CHECKSUM_16;
-				break;
-			case NPM_REPLY_CHECKSUM_16:
-				serialNPM.readBytes(checksum, sizeof(checksum));
-				memcpy(test, header, sizeof(header));
-				memcpy(&test[sizeof(header)], state, sizeof(state));
-				memcpy(&test[sizeof(header) + sizeof(state)], data, sizeof(data));
-				memcpy(&test[sizeof(header) + sizeof(state) + sizeof(data)], checksum, sizeof(checksum));
-				NPM_data_reader(test, 16);
-				if (NPM_checksum_valid_16(test))
-					debug_outln_info(F("Checksum OK..."));
-				NPM_waiting_for_16 = NPM_REPLY_HEADER_16;
-				break;
 			}
 		}
-	}
 	}
 
 	if (send_now)
@@ -2725,7 +2731,7 @@ static void fetchSensorNPM(String &s)
 		}
 	}
 
-	//debug_outln_verbose(FPSTR(DBG_TXT_END_READING), FPSTR(SENSORS_NPM));
+	// debug_outln_verbose(FPSTR(DBG_TXT_END_READING), FPSTR(SENSORS_NPM));
 }
 
 /*****************************************************************
@@ -2774,7 +2780,7 @@ static __noinline void fetchSensorGPS(String &s)
 		}
 		else
 		{
-			//define a default value
+			// define a default value
 			last_value_GPS_timestamp = F("1970-01-01T00:00:00.000");
 		}
 	}
@@ -2828,7 +2834,7 @@ static void display_values()
 	uint8_t screen_count = 0;
 	uint8_t screens[8];
 	int line_count = 0;
-	//debug_outln_info(F("output values to display..."));
+	// debug_outln_info(F("output values to display..."));
 
 	if (cfg::npm_read)
 	{
@@ -2900,7 +2906,7 @@ static void display_values()
 	}
 
 	// update size of "screens" when adding more screens!
-	//if (cfg::has_display)
+	// if (cfg::has_display)
 	if (cfg::has_ssd1306)
 	{
 		switch (screens[next_display_count % screen_count])
@@ -2916,7 +2922,7 @@ static void display_values()
 			display_lines[0] = std::move(tmpl(F("PM1: {v} µg/m³"), check_display_value(pm01_value, -1, 1, 6)));
 			display_lines[1] = std::move(tmpl(F("PM2.5: {v} µg/m³"), check_display_value(pm25_value, -1, 1, 6)));
 			display_lines[2] = std::move(tmpl(F("PM10: {v} µg/m³"), check_display_value(pm10_value, -1, 1, 6)));
-			//display_lines[3] = "NC: " + check_display_value(nc010_value, -1, 0, 3) + " " + check_display_value(nc025_value, -1, 0, 3) + " " + check_display_value(nc100_value, -1, 0, 3);
+			// display_lines[3] = "NC: " + check_display_value(nc010_value, -1, 0, 3) + " " + check_display_value(nc025_value, -1, 0, 3) + " " + check_display_value(nc100_value, -1, 0, 3);
 			break;
 		case 3:
 			display_header = t_sensor;
@@ -3018,7 +3024,7 @@ static void display_values()
  *****************************************************************/
 static void init_display()
 {
-	//if (cfg::has_display && cfg::has_ssd1306)
+	// if (cfg::has_display && cfg::has_ssd1306)
 	if (cfg::has_ssd1306)
 
 	{
@@ -3032,7 +3038,7 @@ static void init_display()
 #endif
 
 		oled_ssd1306->init();
-		oled_ssd1306->flipScreenVertically(); //ENLEVER ???
+		oled_ssd1306->flipScreenVertically(); // ENLEVER ???
 		oled_ssd1306->clear();
 		oled_ssd1306->displayOn();
 		oled_ssd1306->setTextAlignment(TEXT_ALIGN_CENTER);
@@ -3043,7 +3049,7 @@ static void init_display()
 		// modifying the I2C speed to 400k, which overwhelms some of the
 		// sensors.
 		Wire.setClock(100000);
-		//Wire.setClockStretchLimit(150000);
+		// Wire.setClockStretchLimit(150000);
 	}
 }
 /*****************************************************************
@@ -3089,29 +3095,41 @@ static void powerOnTestSensors()
 	if (cfg::npm_read)
 	{
 		uint8_t test_state;
-		delay(15000); //wait a bit to be sure Next PM is ready to receive instructions.
+		delay(15000); // wait a bit to be sure Next PM is ready to receive instructions.
 		test_state = NPM_get_state();
-		if (test_state == 0x00){
+		if (test_state == 0x00)
+		{
 			debug_outln_info(F("NPM already started..."));
-		}else if (test_state == 0x01){
+		}
+		else if (test_state == 0x01)
+		{
 			debug_outln_info(F("Force start NPM...")); // to read the firmware version
 			is_NPM_running = NPM_start_stop();
-		}else {
-			if (bitRead(test_state, 1) == 1){
+		}
+		else
+		{
+			if (bitRead(test_state, 1) == 1)
+			{
 				debug_outln_info(F("Degraded state"));
-			}else{
+			}
+			else
+			{
 				debug_outln_info(F("Default state"));
 			}
-			if (bitRead(test_state, 2) == 1){
+			if (bitRead(test_state, 2) == 1)
+			{
 				debug_outln_info(F("Not ready"));
 			}
-			if (bitRead(test_state, 3) == 1){
+			if (bitRead(test_state, 3) == 1)
+			{
 				debug_outln_info(F("Heat error"));
 			}
-			if (bitRead(test_state, 4) == 1){
+			if (bitRead(test_state, 4) == 1)
+			{
 				debug_outln_info(F("T/RH error"));
 			}
-			if (bitRead(test_state, 5) == 1){
+			if (bitRead(test_state, 5) == 1)
+			{
 				debug_outln_info(F("Fan error"));
 
 				// if (bitRead(test_state, 0) == 1){
@@ -3122,19 +3140,24 @@ static void powerOnTestSensors()
 				// NPM_fan_speed();
 				// delay(5000);
 			}
-			if (bitRead(test_state, 6) == 1){
+			if (bitRead(test_state, 6) == 1)
+			{
 				debug_outln_info(F("Memory error"));
 			}
-			if (bitRead(test_state, 7) == 1){
+			if (bitRead(test_state, 7) == 1)
+			{
 				debug_outln_info(F("Laser error"));
 			}
-			if (bitRead(test_state, 0) == 0){
+			if (bitRead(test_state, 0) == 0)
+			{
 				debug_outln_info(F("NPM already started..."));
-			}else{
-				//if(!is_NPM_running){
+			}
+			else
+			{
+				// if(!is_NPM_running){
 				debug_outln_info(F("Force start NPM..."));
 				is_NPM_running = NPM_start_stop();
-			//}
+				//}
 			}
 		}
 
@@ -3185,7 +3208,7 @@ static void logEnabledAPIs()
 
 static void logEnabledDisplays()
 {
-	//if (cfg::has_display || cfg::has_ssd1306)
+	// if (cfg::has_display || cfg::has_ssd1306)
 	if (cfg::has_ssd1306)
 
 	{
@@ -3246,25 +3269,6 @@ static unsigned long sendDataToOptionalApis(const String &data)
 	return sum_send_time;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /*****************************************************************
  * Helium LoRaWAN                  *
  *****************************************************************/
@@ -3274,13 +3278,13 @@ static unsigned long sendDataToOptionalApis(const String &data)
 // uint8_t AppEui[] = {0x60, 0x81, 0xF9, 0x22, 0x43, 0x9D, 0x24, 0xD9};
 // uint8_t AppKey[] = {0xCA, 0x22, 0x28, 0xAE, 0x0C, 0xC8, 0x6C, 0x6E, 0x31, 0x77, 0xA9, 0x8D, 0xCD, 0xF0, 0xDC, 0xBB};
 
-//ATTENTION ON PREND LE LSB
+// ATTENTION ON PREND LE LSB
 
 // This EUI must be in little-endian format, so least-significant-byte
 // first. When copying an EUI from ttnctl output, this means to reverse
 // the bytes.
 
-//6081F97B1A5B6763 A RETOURNER ET CONVERTIR EN HEX
+// 6081F97B1A5B6763 A RETOURNER ET CONVERTIR EN HEX
 
 // This key should be in big endian format (or, since it is not really a
 // number but a block of memory, endianness does not really apply).
@@ -3291,7 +3295,7 @@ static u1_t PROGMEM deveui_hex[8] = {};
 // DANS LE MEME ORDRE
 static u1_t PROGMEM appkey_hex[16] = {};
 
-//DEPLACER LES MEMCPY!!!
+// DEPLACER LES MEMCPY!!!
 
 void os_getArtEui(u1_t *buf) { memcpy_P(buf, appeui_hex, 8); }
 
@@ -3299,7 +3303,7 @@ void os_getDevEui(u1_t *buf) { memcpy_P(buf, deveui_hex, 8); }
 
 void os_getDevKey(u1_t *buf) { memcpy_P(buf, appkey_hex, 16); }
 
-//DEFINIR LA SIZE AJOUTER PM1!!!!!!!!!!!!!!!
+// DEFINIR LA SIZE AJOUTER PM1!!!!!!!!!!!!!!!
 static uint8_t datalora_sds[21] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 static uint8_t datalora_npm[25] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 static osjob_t sendjob;
@@ -3332,8 +3336,6 @@ const unsigned TX_INTERVAL = cfg::sending_intervall_ms; // Replaced with cfg::ti
 // 			#endif
 
 // 			#if defined(ARDUINO_TTGO_LoRa32_v21new)
-			
-			
 
 // 			#endif
 
@@ -3365,29 +3367,29 @@ void ToByteArray()
 	int k = 1;
 	int l = 0;
 
-//6081F97B1A5B6763
+	// 6081F97B1A5B6763
 
 	for (unsigned int i = 0; i < appeui_str.length(); i += 2)
 	{
-		String byteString = appeui_str.substring(i, i + 2); //ICI? 1
-		 //Debug.println(byteString);
+		String byteString = appeui_str.substring(i, i + 2); // ICI? 1
+															// Debug.println(byteString);
 		byte byte = (char)strtol(byteString.c_str(), NULL, 16);
-		  //Debug.println(byte,HEX);
-		appeui_hex[(appeui_str.length() / 2) - j] = byte; //reverse
+		// Debug.println(byte,HEX);
+		appeui_hex[(appeui_str.length() / 2) - j] = byte; // reverse
 		j += 1;
 	}
 
-//6081F922439D24D9
+	// 6081F922439D24D9
 	for (unsigned int i = 0; i < deveui_str.length(); i += 2)
 	{
 		String byteString = deveui_str.substring(i, i + 2);
 		//  Debug.println(byteString);
 		byte byte = (char)strtol(byteString.c_str(), NULL, 16);
 		//  Debug.println(byte, HEX);
-		deveui_hex[(deveui_str.length() / 2) - k] = byte; //reverse
+		deveui_hex[(deveui_str.length() / 2) - k] = byte; // reverse
 		k += 1;
 	}
-//CA2228AE0CC86C6E3177A98DCDF0DCBB
+	// CA2228AE0CC86C6E3177A98DCDF0DCBB
 
 	for (unsigned int i = 0; i < appkey_str.length(); i += 2)
 	{
@@ -3395,8 +3397,8 @@ void ToByteArray()
 		//  Debug.println(byteString);
 		byte byte = (char)strtol(byteString.c_str(), NULL, 16);
 		//  Debug.println(byte, HEX);
-		//appkey_hex[(appkey_str.length() / 2) - 1 - l] = byte; // reverse
-		appkey_hex[l] = byte; //not reverse
+		// appkey_hex[(appkey_str.length() / 2) - 1 - l] = byte; // reverse
+		appkey_hex[l] = byte; // not reverse
 		l += 1;
 	}
 }
@@ -3406,7 +3408,7 @@ void printHex2(unsigned v)
 	v &= 0xff;
 	if (v < 16)
 		Serial.print('0');
-	//debug_outln_info(F("\nChipId: "), esp_chipid);
+	// debug_outln_info(F("\nChipId: "), esp_chipid);
 	Debug.print(v, HEX);
 }
 
@@ -3496,13 +3498,13 @@ void onEvent(ev_t ev)
 		LMIC_setLinkCheckMode(0);
 		break;
 	/*
-        || This event is defined but not used in the code. No
-        || point in wasting codespace on it.
-        ||
-        || case EV_RFU1:
-        ||     Serial.println(F("EV_RFU1"));
-        ||     break;
-        */
+		|| This event is defined but not used in the code. No
+		|| point in wasting codespace on it.
+		||
+		|| case EV_RFU1:
+		||     Serial.println(F("EV_RFU1"));
+		||     break;
+		*/
 	case EV_JOIN_FAILED:
 		Debug.println(F("EV_JOIN_FAILED"));
 		break;
@@ -3540,13 +3542,13 @@ void onEvent(ev_t ev)
 		Debug.println(F("EV_LINK_ALIVE"));
 		break;
 	/*
-        || This event is defined but not used in the code. No
-        || point in wasting codespace on it.
-        ||
-        || case EV_SCAN_FOUND:
-        ||    Serial.println(F("EV_SCAN_FOUND"));
-        ||    break;
-        */
+		|| This event is defined but not used in the code. No
+		|| point in wasting codespace on it.
+		||
+		|| case EV_SCAN_FOUND:
+		||    Serial.println(F("EV_SCAN_FOUND"));
+		||    break;
+		*/
 	case EV_TXSTART:
 		Debug.println(F("EV_TXSTART"));
 		break;
@@ -3679,12 +3681,11 @@ static void prepareTxFrame()
 	}
 }
 
-
 /*****************************************************************
  * Check stack                                                    *
  *****************************************************************/
-void * StackPtrAtStart;
-void * StackPtrEnd;
+void *StackPtrAtStart;
+void *StackPtrEnd;
 UBaseType_t watermarkStart;
 
 /*****************************************************************
@@ -3694,20 +3695,17 @@ UBaseType_t watermarkStart;
 void setup(void)
 {
 
-   void* SpStart = NULL;
-   StackPtrAtStart = (void *)&SpStart;
-   watermarkStart =  uxTaskGetStackHighWaterMark(NULL);
-   StackPtrEnd = StackPtrAtStart - watermarkStart;
+	void *SpStart = NULL;
+	StackPtrAtStart = (void *)&SpStart;
+	watermarkStart = uxTaskGetStackHighWaterMark(NULL);
+	StackPtrEnd = StackPtrAtStart - watermarkStart;
 
 	Debug.begin(9600); // Output to Serial at 9600 baud
 					   //----------------------------------------------
 
-
-  Debug.printf("\r\n\r\nAddress of Stackpointer near start is:  %p \r\n",  (void *)StackPtrAtStart);
-  Debug.printf("End of Stack is near: %p \r\n",  (void *)StackPtrEnd);
-  Debug.printf("Free Stack at setup is:  %d \r\n",  (uint32_t)StackPtrAtStart - (uint32_t)StackPtrEnd);
-
-
+	Debug.printf("\r\n\r\nAddress of Stackpointer near start is:  %p \r\n", (void *)StackPtrAtStart);
+	Debug.printf("End of Stack is near: %p \r\n", (void *)StackPtrEnd);
+	Debug.printf("Free Stack at setup is:  %d \r\n", (uint32_t)StackPtrAtStart - (uint32_t)StackPtrEnd);
 
 	// uint64_t chipid_num;
 	// chipid_num = ESP.getEfuseMac();
@@ -3733,7 +3731,7 @@ void setup(void)
 #endif
 
 	// #if defined(ARDUINO_HELTEC_WIFI_LORA_32_V2)
-	//Heltec.begin(true /*DisplayEnable Enable*/, true /*LoRa Disable*/, true /*Serial Enable*/, true /*PABOOST Enable*/, 470E6 /**/);
+	// Heltec.begin(true /*DisplayEnable Enable*/, true /*LoRa Disable*/, true /*Serial Enable*/, true /*PABOOST Enable*/, 470E6 /**/);
 	// if (cfg::has_lora)
 	// {
 	// 	Heltec.begin(true, true, false); // Serial normal
@@ -3806,7 +3804,7 @@ void setup(void)
 	// }
 
 	debug_outln_info(F("\nChipId: "), esp_chipid);
-	//debug_outln_info(F("\nMAC Id: "), esp_mac_id);
+	// debug_outln_info(F("\nMAC Id: "), esp_mac_id);
 
 	if (cfg::gps_read)
 	{
@@ -3881,58 +3879,56 @@ void setup(void)
 		if (!strcmp(cfg::appeui, "0000000000000000") && !strcmp(cfg::deveui, "0000000000000000") && !strcmp(cfg::appkey, "00000000000000000000000000000000"))
 		{
 
-			#if defined(ARDUINO_HELTEC_WIFI_LORA_32_V2) or defined(ARDUINO_TTGO_LoRa32_v21new)
+#if defined(ARDUINO_HELTEC_WIFI_LORA_32_V2) or defined(ARDUINO_TTGO_LoRa32_v21new)
 
 			const lmic_pinmap *pPinMap = Arduino_LMIC::GetPinmap_ThisBoard();
-			//auto* pinMap = Arduino_LMIC::GetPinmap_ThisBoard();
-
-			#endif
-			
-			#if defined(ESP32) and not defined(ARDUINO_HELTEC_WIFI_LORA_32_V2) and not defined(ARDUINO_TTGO_LoRa32_v21new)
-
-const lmic_pinmap lmic_pins = {
-	.nss = 15,
-	.rxtx = LMIC_UNUSED_PIN,
-	.rst = LMIC_UNUSED_PIN,
-	.dio = {4, 5, LMIC_UNUSED_PIN},
-};
-
-// 		    lmic_pinmap lmic_pins = {
-//     .nss = 15,
-//     .rxtx = LMIC_UNUSED_PIN,
-//     .rst = LMIC_UNUSED_PIN,
-//     .dio = {5, 4, LMIC_UNUSED_PIN},
-//     // optional: set polarity of rxtx pin.
-//     .rxtx_rx_active = 0,
-//     // optional: set RSSI cal for listen-before-talk
-//     // this value is in dB, and is added to RSSI
-//     // measured prior to decision.
-//     // Must include noise guardband! Ignored in US,
-//     // EU, IN, other markets where LBT is not required.
-//     .rssi_cal = 10,
-//     // optional: override LMIC_SPI_FREQ if non-zero
-//     .spi_freq = 1000000,
-//   };
-
-    const lmic_pinmap *pPinMap = &lmic_pins;
+			// auto* pinMap = Arduino_LMIC::GetPinmap_ThisBoard();
 
 #endif
 
+#if defined(ESP32) and not defined(ARDUINO_HELTEC_WIFI_LORA_32_V2) and not defined(ARDUINO_TTGO_LoRa32_v21new)
+
+			const lmic_pinmap lmic_pins = {
+				.nss = 15,
+				.rxtx = LMIC_UNUSED_PIN,
+				.rst = LMIC_UNUSED_PIN,
+				.dio = {4, 5, LMIC_UNUSED_PIN},
+			};
+
+			// 		    lmic_pinmap lmic_pins = {
+			//     .nss = 15,
+			//     .rxtx = LMIC_UNUSED_PIN,
+			//     .rst = LMIC_UNUSED_PIN,
+			//     .dio = {5, 4, LMIC_UNUSED_PIN},
+			//     // optional: set polarity of rxtx pin.
+			//     .rxtx_rx_active = 0,
+			//     // optional: set RSSI cal for listen-before-talk
+			//     // this value is in dB, and is added to RSSI
+			//     // measured prior to decision.
+			//     // Must include noise guardband! Ignored in US,
+			//     // EU, IN, other markets where LBT is not required.
+			//     .rssi_cal = 10,
+			//     // optional: override LMIC_SPI_FREQ if non-zero
+			//     .spi_freq = 1000000,
+			//   };
+
+			const lmic_pinmap *pPinMap = &lmic_pins;
+
+#endif
 
 			// if (pPinMap == nullptr) {
-       
-            // Debug.println(F("Board not known to library; add pinmap or update getconfig_thisboard.cpp"));
-        
-    		// 	}
 
-			//Debug.println(pPinMap);
-			
+			// Debug.println(F("Board not known to library; add pinmap or update getconfig_thisboard.cpp"));
+
+			// 	}
+
+			// Debug.println(pPinMap);
+
 			os_init_ex(pPinMap);
-			//os_init_ex(pinMap);
-			// Reset the MAC state. Session and pending data transfers will be discarded.
+			// os_init_ex(pinMap);
+			//  Reset the MAC state. Session and pending data transfers will be discarded.
 
- 			//os_init();
-
+			// os_init();
 
 			LMIC_reset();
 			// allow much more clock error than the X/1000 default. See:
@@ -3943,17 +3939,15 @@ const lmic_pinmap lmic_pins = {
 			LMIC_setClockError(1 * MAX_CLOCK_ERROR / 40);
 
 			LMIC_setLinkCheckMode(0);
-			LMIC_setDrTxpow(DR_SF7, 14); //BONNE OPTION????
+			LMIC_setDrTxpow(DR_SF7, 14); // BONNE OPTION????
 
-			//Set the data rate to Spreading Factor 7.  This is the fastest supported rate for 125 kHz channels, and it
-			// minimizes air time and battery power. Set the transmission power to 14 dBi (25 mW).
+			// Set the data rate to Spreading Factor 7.  This is the fastest supported rate for 125 kHz channels, and it
+			//  minimizes air time and battery power. Set the transmission power to 14 dBi (25 mW).
 
 			// Start job (sending automatically starts OTAA too)
-			do_send(&sendjob); 
-			
-			
-			
-			//ATTENTION PREMIER START!!!!!
+			do_send(&sendjob);
+
+			// ATTENTION PREMIER START!!!!!
 		}
 	}
 }
@@ -4028,7 +4022,7 @@ void loop(void)
 		}
 	}
 
-	//if ((msSince(last_display_millis) > DISPLAY_UPDATE_INTERVAL_MS) && (cfg::has_display && cfg::has_ssd1306 ))
+	// if ((msSince(last_display_millis) > DISPLAY_UPDATE_INTERVAL_MS) && (cfg::has_display && cfg::has_ssd1306 ))
 	if ((msSince(last_display_millis) > DISPLAY_UPDATE_INTERVAL_MS) && (cfg::has_ssd1306))
 
 	{
@@ -4042,8 +4036,8 @@ void loop(void)
 	if (send_now)
 	{
 
-		void* SpActual = NULL;
- 		Serial.printf("Free Stack at send_now is: %d \r\n", (uint32_t)&SpActual - (uint32_t)StackPtrEnd);
+		void *SpActual = NULL;
+		Serial.printf("Free Stack at send_now is: %d \r\n", (uint32_t)&SpActual - (uint32_t)StackPtrEnd);
 
 		if (cfg::has_wifi)
 		{
@@ -4053,9 +4047,8 @@ void loop(void)
 			data = FPSTR(data_first_part);
 			RESERVE_STRING(result, MED_STR);
 
-		void* SpActual = NULL;
- 		Serial.printf("Free Stack at sendSensorCommunity is: %d \r\n", (uint32_t)&SpActual - (uint32_t)StackPtrEnd);
-
+			void *SpActual = NULL;
+			Serial.printf("Free Stack at sendSensorCommunity is: %d \r\n", (uint32_t)&SpActual - (uint32_t)StackPtrEnd);
 
 			if (cfg::sds_read)
 			{
@@ -4109,7 +4102,7 @@ void loop(void)
 			Debug.println(data);
 			sum_send_time += sendDataToOptionalApis(data);
 
-			//MODELE => CHANGER POUR PMS!!!
+			// MODELE => CHANGER POUR PMS!!!
 
 			//{"software_version" : "Nebulo-V1-122021", "sensordatavalues" : [ {"value_type" : "NPM_P0", "value" : "1.84"}, {"value_type" : "NPM_P1", "value" : "2.80"}, {"value_type" : "NPM_P2", "value" : "2.06"}, {"value_type" : "NPM_N1", "value" : "27.25"}, {"value_type" : "NPM_N10", "value" : "27.75"}, {"value_type" : "NPM_N25", "value" : "27.50"}, {"value_type" : "BME280_temperature", "value" : "20.84"}, {"value_type" : "BME280_pressure", "value" : "99220.03"}, {"value_type" : "BME280_humidity", "value" : "61.66"}, {"value_type" : "samples", "value" : "138555"}, {"value_type" : "min_micro", "value" : "933"}, {"value_type" : "max_micro", "value" : "351024"}, {"value_type" : "interval", "value" : "145000"}, {"value_type" : "signal", "value" : "-71"} ]}
 
@@ -4146,7 +4139,6 @@ void loop(void)
 			count_sends++;
 		}
 
-
 		if (cfg::has_lora)
 		{
 
@@ -4159,13 +4151,12 @@ void loop(void)
 
 			prepareTxFrame();
 
-		void* SpActual = NULL;
- 		Serial.printf("Free Stack at before send LoRaWAN is: %d \r\n", (uint32_t)&SpActual - (uint32_t)StackPtrEnd);
-
+			void *SpActual = NULL;
+			Serial.printf("Free Stack at before send LoRaWAN is: %d \r\n", (uint32_t)&SpActual - (uint32_t)StackPtrEnd);
 
 			os_runloop_once();
 
-			//RECONNECTER LE WIFI LE CAS ÈCHENAT
+			// RECONNECTER LE WIFI LE CAS ÈCHENAT
 
 			// POUR VERIF:
 			// void os_runloop_once()
