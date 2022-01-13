@@ -4150,12 +4150,12 @@ void loop(void)
 		if (cfg::has_lora)
 		{
 
-			if (WiFi.status() == WL_CONNECTED)
-			{
-				debug_outln_info(F("Stop WiFi before LoRaWAN"));
-				WiFi.disconnect();
-				//delay(2000);
-			}
+			// if (WiFi.status() == WL_CONNECTED)
+			// {
+			// 	debug_outln_info(F("Stop WiFi before LoRaWAN"));
+			// 	WiFi.disconnect();
+			// 	//delay(2000);
+			// }
 
 			prepareTxFrame();
 
