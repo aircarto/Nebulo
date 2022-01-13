@@ -3679,6 +3679,14 @@ static void prepareTxFrame()
 	}
 }
 
+
+/*****************************************************************
+ * Check stack                                                    *
+ *****************************************************************/
+void * StackPtrAtStart;
+void * StackPtrEnd;
+UBaseType_t watermarkStart;
+
 /*****************************************************************
  * The Setup                                                     *
  *****************************************************************/
@@ -3686,8 +3694,20 @@ static void prepareTxFrame()
 void setup(void)
 {
 
+   void* SpStart = NULL;
+   StackPtrAtStart = (void *)&SpStart;
+   watermarkStart =  uxTaskGetStackHighWaterMark(NULL);
+   StackPtrEnd = StackPtrAtStart - watermarkStart;
+
 	Debug.begin(9600); // Output to Serial at 9600 baud
 					   //----------------------------------------------
+
+
+  Debug.printf("\r\n\r\nAddress of Stackpointer near start is:  %p \r\n",  (void *)StackPtrAtStart);
+  Debug.printf("End of Stack is near: %p \r\n",  (void *)StackPtrEnd);
+  Debug.printf("Free Stack at setup is:  %d \r\n",  (uint32_t)StackPtrAtStart - (uint32_t)StackPtrEnd);
+
+
 
 	// uint64_t chipid_num;
 	// chipid_num = ESP.getEfuseMac();
@@ -3862,19 +3882,41 @@ void setup(void)
 		{
 
 			#if defined(ARDUINO_HELTEC_WIFI_LORA_32_V2) or defined(ARDUINO_TTGO_LoRa32_v21new)
-			
-			
-			//const lmic_pinmap *pPinMap = Arduino_LMIC::GetPinmap_ThisBoard();
-			auto* pinMap = Arduino_LMIC::GetPinmap_ThisBoard();
 
-
-
-
+			const lmic_pinmap *pPinMap = Arduino_LMIC::GetPinmap_ThisBoard();
+			//auto* pinMap = Arduino_LMIC::GetPinmap_ThisBoard();
 
 			#endif
+			
+			#if defined(ESP32) and not defined(ARDUINO_HELTEC_WIFI_LORA_32_V2) and not defined(ARDUINO_TTGO_LoRa32_v21new)
 
-		
+const lmic_pinmap lmic_pins = {
+	.nss = 15,
+	.rxtx = LMIC_UNUSED_PIN,
+	.rst = LMIC_UNUSED_PIN,
+	.dio = {4, 5, LMIC_UNUSED_PIN},
+};
 
+// 		    lmic_pinmap lmic_pins = {
+//     .nss = 15,
+//     .rxtx = LMIC_UNUSED_PIN,
+//     .rst = LMIC_UNUSED_PIN,
+//     .dio = {5, 4, LMIC_UNUSED_PIN},
+//     // optional: set polarity of rxtx pin.
+//     .rxtx_rx_active = 0,
+//     // optional: set RSSI cal for listen-before-talk
+//     // this value is in dB, and is added to RSSI
+//     // measured prior to decision.
+//     // Must include noise guardband! Ignored in US,
+//     // EU, IN, other markets where LBT is not required.
+//     .rssi_cal = 10,
+//     // optional: override LMIC_SPI_FREQ if non-zero
+//     .spi_freq = 1000000,
+//   };
+
+    const lmic_pinmap *pPinMap = &lmic_pins;
+
+#endif
 
 
 			// if (pPinMap == nullptr) {
@@ -3885,8 +3927,8 @@ void setup(void)
 
 			//Debug.println(pPinMap);
 			
-			//os_init_ex(pPinMap);
-			os_init_ex(pinMap);
+			os_init_ex(pPinMap);
+			//os_init_ex(pinMap);
 			// Reset the MAC state. Session and pending data transfers will be discarded.
 
  			//os_init();
@@ -3999,6 +4041,10 @@ void loop(void)
 
 	if (send_now)
 	{
+
+		void* SpActual = NULL;
+ 		Serial.printf("Free Stack at send_now is: %d \r\n", (uint32_t)&SpActual - (uint32_t)StackPtrEnd);
+
 		if (cfg::has_wifi)
 		{
 
@@ -4006,6 +4052,10 @@ void loop(void)
 			RESERVE_STRING(data, LARGE_STR);
 			data = FPSTR(data_first_part);
 			RESERVE_STRING(result, MED_STR);
+
+		void* SpActual = NULL;
+ 		Serial.printf("Free Stack at sendSensorCommunity is: %d \r\n", (uint32_t)&SpActual - (uint32_t)StackPtrEnd);
+
 
 			if (cfg::sds_read)
 			{
@@ -4096,10 +4146,26 @@ void loop(void)
 			count_sends++;
 		}
 
+
 		if (cfg::has_lora)
 		{
+
+			if (WiFi.status() == WL_CONNECTED)
+			{
+				debug_outln_info(F("Stop WiFi before LoRaWAN"));
+				WiFi.disconnect();
+				//delay(2000);
+			}
+
 			prepareTxFrame();
+
+		void* SpActual = NULL;
+ 		Serial.printf("Free Stack at before send LoRaWAN is: %d \r\n", (uint32_t)&SpActual - (uint32_t)StackPtrEnd);
+
+
 			os_runloop_once();
+
+			//RECONNECTER LE WIFI LE CAS ÈCHENAT
 
 			// POUR VERIF:
 			// void os_runloop_once()
@@ -4129,6 +4195,13 @@ void loop(void)
 			// 		j->func(j);
 			// 	}
 			// }
+			// sample_count = 0;
+			// last_micro = 0;
+			// min_micro = 1000000000;
+			// max_micro = 0;
+			// sum_send_time = 0;
+			starttime = millis(); // store the start time
+			count_sends++;
 		}
 	}
 
