@@ -1,4 +1,5 @@
 // Un super code
+int truc = 0;
 
 #include <WString.h>
 #include <pgmspace.h>
