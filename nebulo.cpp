@@ -3791,6 +3791,204 @@ void setup()
 
 void loop()
 {
+
+String result_PPD, result_SDS, result_PMS, result_HPM, result_NPM;
+	String result_GPS, result_DNMS;
+
+	unsigned sum_send_time = 0;
+
+	act_micro = micros();
+	act_milli = millis();
+	send_now = msSince(starttime) > cfg::sending_intervall_ms;
+
+	// Wait at least 30s for each NTP server to sync
+
+	if (cfg::has_wifi)
+	{
+		if (!sntp_time_set && send_now && msSince(time_point_device_start_ms) < 1000 * 2 * 30 + 5000)
+		{
+			debug_outln_info(F("NTP sync not finished yet, skipping send"));
+			send_now = false;
+			starttime = act_milli;
+		}
+	}
+
+	sample_count++;
+	if (last_micro != 0)
+	{
+		unsigned long diff_micro = act_micro - last_micro;
+		UPDATE_MIN_MAX(min_micro, max_micro, diff_micro);
+	}
+	last_micro = act_micro;
+
+	if (cfg::npm_read)
+	{
+		if ((msSince(starttime_NPM) > SAMPLETIME_NPM_MS) || send_now)
+		{
+			starttime_NPM = act_milli;
+			fetchSensorNPM(result_NPM);
+		}
+	}
+
+	if (cfg::sds_read)
+	{
+		if ((msSince(starttime_SDS) > SAMPLETIME_SDS_MS) || send_now)
+		{
+			starttime_SDS = act_milli;
+			fetchSensorSDS(result_SDS);
+		}
+	}
+
+	if (cfg::gps_read && !gps_init_failed)
+	{
+		// process serial GPS data..
+		while (serialGPS->available() > 0)
+		{
+			gps.encode(serialGPS->read());
+		}
+
+		if ((msSince(starttime_GPS) > SAMPLETIME_GPS_MS) || send_now)
+		{
+			// getting GPS coordinates
+			fetchSensorGPS(result_GPS);
+			starttime_GPS = act_milli;
+		}
+	}
+
+	//if ((msSince(last_display_millis) > DISPLAY_UPDATE_INTERVAL_MS) && (cfg::has_display && cfg::has_ssd1306 ))
+	if ((msSince(last_display_millis) > DISPLAY_UPDATE_INTERVAL_MS) && (cfg::has_ssd1306))
+
+	{
+		display_values();
+		last_display_millis = act_milli;
+	}
+
+	server.handleClient();
+	yield();
+
+	if (send_now)
+	{
+
+		void *SpActual = NULL;
+		Debug.printf("Free Stack at send_now is: %d \r\n", (uint32_t)&SpActual - (uint32_t)StackPtrEnd);
+
+		if (cfg::has_wifi)
+		{
+
+			last_signal_strength = WiFi.RSSI();
+			RESERVE_STRING(data, LARGE_STR);
+			data = FPSTR(data_first_part);
+			RESERVE_STRING(result, MED_STR);
+
+			void *SpActual = NULL;
+			Debug.printf("Free Stack at sendSensorCommunity is: %d \r\n", (uint32_t)&SpActual - (uint32_t)StackPtrEnd);
+
+			if (cfg::sds_read)
+			{
+				data += result_SDS;
+				sum_send_time += sendSensorCommunity(result_SDS, SDS_API_PIN, FPSTR(SENSORS_SDS011), "SDS_");
+			}
+			if (cfg::npm_read)
+			{
+				data += result_NPM;
+				sum_send_time += sendSensorCommunity(result_NPM, NPM_API_PIN, FPSTR(SENSORS_NPM), "NPM_");
+				Debug.println(data);
+			}
+
+			if (cfg::bmx280_read && (!bmx280_init_failed))
+			{
+				// getting temperature, humidity and pressure (optional)
+				fetchSensorBMX280(result);
+				data += result;
+				if (bmx280.sensorID() == BME280_SENSOR_ID)
+				{
+					sum_send_time += sendSensorCommunity(result, BME280_API_PIN, FPSTR(SENSORS_BME280), "BME280_");
+				}
+				else
+				{
+					sum_send_time += sendSensorCommunity(result, BMP280_API_PIN, FPSTR(SENSORS_BMP280), "BMP280_");
+				}
+				result = emptyString;
+				Debug.println(data);
+			}
+
+			if (cfg::gps_read)
+			{
+				data += result_GPS;
+				sum_send_time += sendSensorCommunity(result_GPS, GPS_API_PIN, F("GPS"), "GPS_");
+				result = emptyString;
+			}
+
+			add_Value2Json(data, F("samples"), String(sample_count));
+			add_Value2Json(data, F("min_micro"), String(min_micro));
+			add_Value2Json(data, F("max_micro"), String(max_micro));
+			add_Value2Json(data, F("interval"), String(cfg::sending_intervall_ms));
+			add_Value2Json(data, F("signal"), String(last_signal_strength));
+
+			if ((unsigned)(data.lastIndexOf(',') + 1) == data.length())
+			{
+				data.remove(data.length() - 1);
+			}
+			data += "]}";
+
+			yield();
+			Debug.println(data);
+			sum_send_time += sendDataToOptionalApis(data);
+
+			//json example for WiFi transmission
+
+			//{"software_version" : "Nebulo-V1-122021", "sensordatavalues" : [ {"value_type" : "NPM_P0", "value" : "1.84"}, {"value_type" : "NPM_P1", "value" : "2.80"}, {"value_type" : "NPM_P2", "value" : "2.06"}, {"value_type" : "NPM_N1", "value" : "27.25"}, {"value_type" : "NPM_N10", "value" : "27.75"}, {"value_type" : "NPM_N25", "value" : "27.50"}, {"value_type" : "BME280_temperature", "value" : "20.84"}, {"value_type" : "BME280_pressure", "value" : "99220.03"}, {"value_type" : "BME280_humidity", "value" : "61.66"}, {"value_type" : "samples", "value" : "138555"}, {"value_type" : "min_micro", "value" : "933"}, {"value_type" : "max_micro", "value" : "351024"}, {"value_type" : "interval", "value" : "145000"}, {"value_type" : "signal", "value" : "-71"} ]}
+
+			// https://en.wikipedia.org/wiki/Moving_average#Cumulative_moving_average
+			sending_time = (3 * sending_time + sum_send_time) / 4;
+			if (sum_send_time > 0)
+			{
+				debug_outln_info(F("Time for Sending (ms): "), String(sending_time));
+			}
+
+			// reconnect to WiFi if disconnected
+			if (WiFi.status() != WL_CONNECTED)
+			{
+				debug_outln_info(F("Connection lost, reconnecting "));
+				WiFi_error_count++;
+				WiFi.reconnect();
+				waitForWifiToConnect(20);
+			}
+
+			// only do a restart after finishing sending
+			if (msSince(time_point_device_start_ms) > DURATION_BEFORE_FORCED_RESTART_MS)
+			{
+				sensor_restart();
+			}
+
+			// Resetting for next sampling
+			last_data_string = std::move(data);
+			sample_count = 0;
+			last_micro = 0;
+			min_micro = 1000000000;
+			max_micro = 0;
+			sum_send_time = 0;
+			starttime = millis(); // store the start time
+			count_sends++;
+		}
+
+		// if (cfg::has_lora)
+		// {
+		// 	prepareTxFrame();
+
+		// 	void *SpActual = NULL;
+		// 	Debug.printf("Free Stack at before send LoRaWAN is: %d \r\n", (uint32_t)&SpActual - (uint32_t)StackPtrEnd);
+
+		// 	//Refresh data to send after measurement
+		// 	do_send(&sendjob);
+
+		// 	os_runloop_once();
+
+		// 	starttime = millis(); // store the start time
+		// 	count_sends++;
+		// }
+	}
+
   os_runloop_once();
 }
 
