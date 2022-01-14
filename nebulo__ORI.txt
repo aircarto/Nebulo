@@ -122,9 +122,9 @@ namespace cfg
 	void initNonTrivials(const char *id)
 	{
 		strcpy(cfg::current_lang, CURRENT_LANG);
-		strcpy_P(appeui, APPEUI_String);
-		strcpy_P(deveui, DEVEUI_String);
-		strcpy_P(appkey, APPKEY_String);
+		strcpy_P(appeui, APPEUI);
+		strcpy_P(deveui, DEVEUI);
+		strcpy_P(appkey, APPKEY);
 		strcpy_P(www_username, WWW_USERNAME);
 		strcpy_P(www_password, WWW_PASSWORD);
 		strcpy_P(wlanssid, WLANSSID);
@@ -133,6 +133,8 @@ namespace cfg
 		strcpy_P(url_custom, URL_CUSTOM);
 		strcpy_P(host_custom2, HOST_CUSTOM2);
 		strcpy_P(url_custom2, URL_CUSTOM2);
+
+		//AJOUTER LORA ICI?
 
 		if (!*fs_ssid)
 		{
@@ -3270,22 +3272,80 @@ static unsigned long sendDataToOptionalApis(const String &data)
  * Helium LoRaWAN                  *
  *****************************************************************/
 
-// APPEUI en LSB
-static const u1_t PROGMEM APPEUI[8] = {0x55, 0x34, 0x42, 0x33, 0x12, 0x33, 0x87, 0x77};
-void os_getArtEui(u1_t *buf) { memcpy_P(buf, APPEUI, 8); }
+// /* OTAA para*/ EXEMPLE
+// uint8_t DevEui[] = {0x60, 0x81, 0xF9, 0x7B, 0x1A, 0x5B, 0x67, 0x63};
+// uint8_t AppEui[] = {0x60, 0x81, 0xF9, 0x22, 0x43, 0x9D, 0x24, 0xD9};
+// uint8_t AppKey[] = {0xCA, 0x22, 0x28, 0xAE, 0x0C, 0xC8, 0x6C, 0x6E, 0x31, 0x77, 0xA9, 0x8D, 0xCD, 0xF0, 0xDC, 0xBB};
 
-// DEVEUI en LSB
-static const u1_t PROGMEM DEVEUI[8] = {0x2B, 0xAF, 0x04, 0xD0, 0x7E, 0xD5, 0xB3, 0x70};
-void os_getDevEui(u1_t *buf) { memcpy_P(buf, DEVEUI, 8); }
-
-// APPKEY en MSB
-static const u1_t PROGMEM APPKEY[16] = {0xC2, 0x1B, 0x47, 0xF7, 0x7E, 0x35, 0x0C, 0xFC, 0xB0, 0x10, 0xC3, 0x2F, 0xD3, 0xC0, 0x95, 0x69};
-void os_getDevKey(u1_t *buf) { memcpy_P(buf, APPKEY, 16); }
-
+// This EUI must be in little-endian format, so least-significant-byte
+// first. When copying an EUI from ttnctl output, this means to reverse
+// the bytes.
 
 static u1_t PROGMEM appeui_hex[8] = {};
 static u1_t PROGMEM deveui_hex[8] = {};
+
+// This key should be in big endian format (or, since it is not really a
+// number but a block of memory, endianness does not really apply).
+
 static u1_t PROGMEM appkey_hex[16] = {};
+
+void os_getArtEui(u1_t *buf) { memcpy_P(buf, appeui_hex, 8); }
+
+void os_getDevEui(u1_t *buf) { memcpy_P(buf, deveui_hex, 8); }
+
+void os_getDevKey(u1_t *buf) { memcpy_P(buf, appkey_hex, 16); }
+
+static uint8_t datalora_sds[21] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+static uint8_t datalora_npm[25] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+
+//static uint8_t mydata[] = "Hello, world!";
+static osjob_t sendjob;
+
+// Schedule TX every this many seconds (might become longer due to duty
+// cycle limitations).
+//const unsigned TX_INTERVAL = cfg::sending_intervall_ms; // Replaced with cfg::time_send
+
+// //For Generic ESP32 with Generic Lora
+// #if defined(ESP32) and not defined(ARDUINO_HELTEC_WIFI_LORA_32_V2) and not defined(ARDUINO_TTGO_LoRa32_v21new)
+// // Pin mapping
+// const lmic_pinmap lmic_pins = {
+// 	.nss = 15,
+// 	.rxtx = LMIC_UNUSED_PIN,
+// 	.rst = LMIC_UNUSED_PIN,
+// 	.dio = {4, 5, LMIC_UNUSED_PIN},
+// };
+// #endif
+
+// #if defined(ARDUINO_HELTEC_WIFI_LORA_32_V2)
+// 			const lmic_pinmap lmic_pins = {
+//     		.nss = 18,
+//     		.rxtx = LMIC_UNUSED_PIN,
+//     		.rst = 14,
+//     		.dio = {26, 35, 34}
+// 			};
+
+// 			//const lmic_pinmap *pPinMap = &lmic_pins;
+
+// 			#endif
+
+// 			#if defined(ARDUINO_TTGO_LoRa32_v21new)
+
+// 			#endif
+
+// //OU AU DESSUS?
+// 			//For Generic ESP32 with Generic Lora
+// 			#if defined(ESP32) and not defined(ARDUINO_HELTEC_WIFI_LORA_32_V2) and not defined(ARDUINO_TTGO_LoRa32_v21new)
+// 			// Pin mapping
+// 			const lmic_pinmap lmic_pins = {
+// 				.nss = 15,
+// 				.rxtx = LMIC_UNUSED_PIN,
+// 				.rst = LMIC_UNUSED_PIN,
+// 				.dio = {4, 5, LMIC_UNUSED_PIN},
+// 			};
+
+// 			//const lmic_pinmap *pPinMap = &lmic_pins;
+
+// 			#endif
 
 void ToByteArray()
 {
@@ -3336,227 +3396,175 @@ void ToByteArray()
 	}
 }
 
-static uint8_t datalora_sds[21] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-static uint8_t datalora_npm[25] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-
-static uint8_t mydata[] = "Hello, world!";
-static osjob_t sendjob;
-
-// Schedule TX every this many seconds (might become longer due to duty
-// cycle limitations).
-const unsigned TX_INTERVAL = 60;
-
-// Pin mapping for Heltec
-
-// #if defined(ARDUINO_HELTEC_WIFI_LORA_32_V2)
-// const lmic_pinmap lmic_pins = {
-//     .nss = 18,
-//     .rxtx = LMIC_UNUSED_PIN,
-//     .rst = 14,
-//     .dio = {26, 35, 34}};
-// #endif
-
-// #if defined (ESP32) and not defined(ARDUINO_HELTEC_WIFI_LORA_32_V2)
-
-// const lmic_pinmap lmic_pins = {
-//     .nss = 5,
-//     .rxtx = LMIC_UNUSED_PIN,
-//     .rst = 14,
-//     .dio = {26, 35, 34},
-// };
-// #endif
+void printHex2(unsigned v)
+{
+	v &= 0xff;
+	if (v < 16)
+		Debug.print('0');
+	//debug_outln_info(F("\nChipId: "), esp_chipid);
+	Debug.print(v, HEX);
+}
 
 void do_send(osjob_t *j)
 {
-  // Check if there is not a current TX/RX job running
-  if (LMIC.opmode & OP_TXRXPEND)
-  {
-    Debug.println(F("OP_TXRXPEND, not sending"));
-  }
-  else
-  {
-    // Prepare upstream data transmission at the next possible time.
-    LMIC_setTxData2(1, mydata, sizeof(mydata) - 1, 0);
-    Debug.println(F("Packet queued"));
-  }
-  // Next TX is scheduled after TX_COMPLETE event.
-}
+	// Check if there is not a current TX/RX job running
+	if (LMIC.opmode & OP_TXRXPEND)
+	{
+		Debug.println(F("OP_TXRXPEND, not sending..."));
+	}
+	else
+	{
+		// Prepare upstream data transmission at the next possible time.
 
+		Debug.println(F("Prepare data..."));
 
-// void do_send(osjob_t *j)
-// {
-// 	// Check if there is not a current TX/RX job running
-// 	if (LMIC.opmode & OP_TXRXPEND)
-// 	{
-// 		Debug.println(F("OP_TXRXPEND, not sending..."));
-// 	}
-// 	else
-// 	{
-// 		// Prepare upstream data transmission at the next possible time.
+		//LMIC_setTxData2(1, mydata, sizeof(mydata) - 1, 0);
 
-// 		Debug.println(F("Prepare data..."));
+		if (cfg::sds_read)
+		{
+			LMIC_setTxData2(1, datalora_sds, sizeof(datalora_sds) - 1, 0);
+		}
 
-// 		//LMIC_setTxData2(1, mydata, sizeof(mydata) - 1, 0);
+		if (cfg::npm_read)
+		{
+			LMIC_setTxData2(1, datalora_npm, sizeof(datalora_npm) - 1, 0);
+		}
 
-// 		if (cfg::sds_read)
-// 		{
-// 			LMIC_setTxData2(1, datalora_sds, sizeof(datalora_sds) - 1, 0);
-// 		}
+		// u1_t port is the FPort used for the transmission. Default is 1.
+		// You can send different kind of data using different FPorts,
+		// so the payload decoder can extract the information depending on the port used.
 
-// 		if (cfg::npm_read)
-// 		{
-// 			LMIC_setTxData2(1, datalora_npm, sizeof(datalora_npm) - 1, 0);
-// 		}
-
-// 		// u1_t port is the FPort used for the transmission. Default is 1.
-// 		// You can send different kind of data using different FPorts,
-// 		// so the payload decoder can extract the information depending on the port used.
-
-// 		Debug.println(F("Packet queued"));
-// 	}
-// 	// Next TX is scheduled after TX_COMPLETE event.
-// }
-
-
-
-
-
-
-
-void printHex2(unsigned v)
-{
-  v &= 0xff;
-  if (v < 16)
-    Debug.print('0');
-  Debug.print(v, HEX);
+		Debug.println(F("Packet queued"));
+	}
+	// Next TX is scheduled after TX_COMPLETE event.
 }
 
 void onEvent(ev_t ev)
 {
-  Debug.print(os_getTime());
-  Debug.print(": ");
-  switch (ev)
-  {
-  case EV_SCAN_TIMEOUT:
-    Debug.println(F("EV_SCAN_TIMEOUT"));
-    break;
-  case EV_BEACON_FOUND:
-    Debug.println(F("EV_BEACON_FOUND"));
-    break;
-  case EV_BEACON_MISSED:
-    Debug.println(F("EV_BEACON_MISSED"));
-    break;
-  case EV_BEACON_TRACKED:
-    Debug.println(F("EV_BEACON_TRACKED"));
-    break;
-  case EV_JOINING:
-    Debug.println(F("EV_JOINING"));
-    break;
-  case EV_JOINED:
-    Debug.println(F("EV_JOINED"));
-    {
-      u4_t netid = 0;
-      devaddr_t devaddr = 0;
-      u1_t nwkKey[16];
-      u1_t artKey[16];
-      LMIC_getSessionKeys(&netid, &devaddr, nwkKey, artKey);
-      Debug.print("netid: ");
-      Debug.println(netid, DEC);
-      Debug.print("devaddr: ");
-      Debug.println(devaddr, HEX);
-      Debug.print("AppSKey: ");
-      for (size_t i = 0; i < sizeof(artKey); ++i)
-      {
-        if (i != 0)
-          Debug.print("-");
-        printHex2(artKey[i]);
-      }
-      Debug.println("");
-      Debug.print("NwkSKey: ");
-      for (size_t i = 0; i < sizeof(nwkKey); ++i)
-      {
-        if (i != 0)
-          Debug.print("-");
-        printHex2(nwkKey[i]);
-      }
-      Debug.println();
-    }
-    // Disable link check validation (automatically enabled
-    // during join, but because slow data rates change max TX
-    // size, we don't use it in this example.
-    LMIC_setLinkCheckMode(0);
-    break;
-    /*
-    || This event is defined but not used in the code. No
-    || point in wasting codespace on it.
-    ||
-    || case EV_RFU1:
-    ||     Debug.println(F("EV_RFU1"));
-    ||     break;
-    */
-  case EV_JOIN_FAILED:
-    Debug.println(F("EV_JOIN_FAILED"));
-    break;
-  case EV_REJOIN_FAILED:
-    Debug.println(F("EV_REJOIN_FAILED"));
-    break;
-  case EV_TXCOMPLETE:
-    Debug.println(F("EV_TXCOMPLETE (includes waiting for RX windows)"));
-    if (LMIC.txrxFlags & TXRX_ACK)
-      Debug.println(F("Received ack"));
-    if (LMIC.dataLen)
-    {
-      Debug.print(F("Received "));
-      Debug.print(LMIC.dataLen);
-      Debug.println(F(" bytes of payload"));
-    }
-    // Schedule next transmission
-    os_setTimedCallback(&sendjob, os_getTime() + sec2osticks(TX_INTERVAL), do_send);
-    break;
-  case EV_LOST_TSYNC:
-    Debug.println(F("EV_LOST_TSYNC"));
-    break;
-  case EV_RESET:
-    Debug.println(F("EV_RESET"));
-    break;
-  case EV_RXCOMPLETE:
-    // data received in ping slot
-    Debug.println(F("EV_RXCOMPLETE"));
-    break;
-  case EV_LINK_DEAD:
-    Debug.println(F("EV_LINK_DEAD"));
-    break;
-  case EV_LINK_ALIVE:
-    Debug.println(F("EV_LINK_ALIVE"));
-    break;
-  /*
-  || This event is defined but not used in the code. No
-  || point in wasting codespace on it.
-  ||
-  || case EV_SCAN_FOUND:
-  ||    Debug.println(F("EV_SCAN_FOUND"));
-  ||    break;
-  */
-  case EV_TXSTART:
-    Debug.println(F("EV_TXSTART"));
-    break;
-  case EV_TXCANCELED:
-    Debug.println(F("EV_TXCANCELED"));
-    break;
-  case EV_RXSTART:
-    /* do not print anything -- it wrecks timing */
-    break;
-  case EV_JOIN_TXCOMPLETE:
-    Debug.println(F("EV_JOIN_TXCOMPLETE: no JoinAccept"));
-    break;
+	Debug.print(os_getTime());
+	Debug.print(": ");
+	switch (ev)
+	{
+	case EV_SCAN_TIMEOUT:
+		Debug.println(F("EV_SCAN_TIMEOUT"));
+		break;
+	case EV_BEACON_FOUND:
+		Debug.println(F("EV_BEACON_FOUND"));
+		break;
+	case EV_BEACON_MISSED:
+		Debug.println(F("EV_BEACON_MISSED"));
+		break;
+	case EV_BEACON_TRACKED:
+		Debug.println(F("EV_BEACON_TRACKED"));
+		break;
+	case EV_JOINING:
+		Debug.println(F("EV_JOINING"));
+		break;
+	case EV_JOINED:
+		Debug.println(F("EV_JOINED"));
+		{
+			u4_t netid = 0;
+			devaddr_t devaddr = 0;
+			u1_t nwkKey[16];
+			u1_t artKey[16];
+			LMIC_getSessionKeys(&netid, &devaddr, nwkKey, artKey);
+			Debug.print("netid: ");
+			Debug.println(netid, DEC);
+			Debug.print("devaddr: ");
+			Debug.println(devaddr, HEX);
+			Debug.print("AppSKey: ");
+			for (size_t i = 0; i < sizeof(artKey); ++i)
+			{
+				if (i != 0)
+					Debug.print("-");
+				printHex2(artKey[i]);
+			}
+			Debug.println("");
+			Debug.print("NwkSKey: ");
+			for (size_t i = 0; i < sizeof(nwkKey); ++i)
+			{
+				if (i != 0)
+					Debug.print("-");
+				printHex2(nwkKey[i]);
+			}
+			Debug.println();
+		}
+		// Disable link check validation (automatically enabled
+		// during join, but because slow data rates change max TX
+		// size, we don't use it in this example.
+		LMIC_setLinkCheckMode(0);
+		break;
+	/*
+        || This event is defined but not used in the code. No
+        || point in wasting codespace on it.
+        ||
+        || case EV_RFU1:
+        ||     Serial.println(F("EV_RFU1"));
+        ||     break;
+        */
+	case EV_JOIN_FAILED:
+		Debug.println(F("EV_JOIN_FAILED"));
+		break;
+	case EV_REJOIN_FAILED:
+		Debug.println(F("EV_REJOIN_FAILED"));
+		break;
+		break;
+	case EV_TXCOMPLETE:
+		Debug.println(F("EV_TXCOMPLETE (includes waiting for RX windows)"));
+		if (LMIC.txrxFlags & TXRX_ACK)
+			Debug.println(F("Received ack"));
+		if (LMIC.dataLen)
+		{
+			Debug.println(F("Received "));
+			Debug.println(LMIC.dataLen);
+			Debug.println(F(" bytes of payload"));
+		}
+		// Schedule next transmission
+		//os_setTimedCallback(&sendjob, os_getTime() + sec2osticks(TX_INTERVAL), do_send);
+		break;
+	case EV_LOST_TSYNC:
+		Debug.println(F("EV_LOST_TSYNC"));
+		break;
+	case EV_RESET:
+		Debug.println(F("EV_RESET"));
+		break;
+	case EV_RXCOMPLETE:
+		// data received in ping slot
+		Debug.println(F("EV_RXCOMPLETE"));
+		break;
+	case EV_LINK_DEAD:
+		Debug.println(F("EV_LINK_DEAD"));
+		break;
+	case EV_LINK_ALIVE:
+		Debug.println(F("EV_LINK_ALIVE"));
+		break;
+	/*
+        || This event is defined but not used in the code. No
+        || point in wasting codespace on it.
+        ||
+        || case EV_SCAN_FOUND:
+        ||    Serial.println(F("EV_SCAN_FOUND"));
+        ||    break;
+        */
+	case EV_TXSTART:
+		Debug.println(F("EV_TXSTART"));
+		break;
+	case EV_TXCANCELED:
+		Debug.println(F("EV_TXCANCELED"));
+		break;
+	case EV_RXSTART:
+		/* do not print anything -- it wrecks timing */
+		break;
+	case EV_JOIN_TXCOMPLETE:
+		Debug.println(F("EV_JOIN_TXCOMPLETE: no JoinAccept"));
+		break;
 
-  default:
-    Debug.print(F("Unknown event: "));
-    Debug.println((unsigned)ev);
-    break;
-  }
+	default:
+		Debug.print(F("Unknown event: "));
+		Debug.println((unsigned)ev);
+		break;
+	}
 }
-
 
 static void prepareTxFrame()
 {
@@ -3681,16 +3689,18 @@ UBaseType_t watermarkStart;
  * The Setup                                                     *
  *****************************************************************/
 
-void setup()
+void setup(void)
 {
-  void *SpStart = NULL;
+
+	void *SpStart = NULL;
 	StackPtrAtStart = (void *)&SpStart;
 	watermarkStart = uxTaskGetStackHighWaterMark(NULL);
 	StackPtrEnd = StackPtrAtStart - watermarkStart;
 
-  Serial.begin(9600);
+	Debug.begin(9600); // Output to Serial at 9600 baud
+					   //----------------------------------------------
 
-  Debug.printf("\r\n\r\nAddress of Stackpointer near start is:  %p \r\n", (void *)StackPtrAtStart);
+	Debug.printf("\r\n\r\nAddress of Stackpointer near start is:  %p \r\n", (void *)StackPtrAtStart);
 	Debug.printf("End of Stack is near: %p \r\n", (void *)StackPtrEnd);
 	Debug.printf("Free Stack at setup is:  %d \r\n", (uint32_t)StackPtrAtStart - (uint32_t)StackPtrEnd);
 
@@ -3773,24 +3783,320 @@ void setup()
 		last_display_millis = starttime_SDS = starttime;
 	}
 
-// if (cfg::has_lora)
-// 	{
+	if (cfg::has_lora)
+	{
 
-  const lmic_pinmap *pPinMap = Arduino_LMIC::GetPinmap_ThisBoard();
-  os_init_ex(pPinMap);
+		ToByteArray();
 
-  // LMIC init
-  //os_init();
-  // Reset the MAC state. Session and pending data transfers will be discarded.
-  LMIC_reset();
+		Debug.printf("APPEUI:\n");
+		for (int i = 0; i < 8; i++)
+		{
+			Debug.printf(" %02x", appeui_hex[i]);
+			if (i == 7)
+			{
+				Debug.printf("\n");
+			}
+		}
 
-  // Start job (sending automatically starts OTAA too)
-  do_send(&sendjob);
-//}
+		Debug.printf("DEVEUI:\n");
+		for (int i = 0; i < 8; i++)
+		{
+			Debug.printf(" %02x", deveui_hex[i]);
+			if (i == 7)
+			{
+				Debug.printf("\n");
+			}
+		}
+
+		Debug.printf("APPKEY:\n");
+		for (int i = 0; i < 16; i++)
+		{
+			Debug.printf(" %02x", appkey_hex[i]);
+			if (i == 15)
+			{
+				Debug.printf("\n");
+			}
+		}
+
+#if defined(ARDUINO_HELTEC_WIFI_LORA_32_V2) or defined(ARDUINO_TTGO_LoRa32_v21new)
+
+		//const lmic_pinmap *pPinMap = Arduino_LMIC::GetPinmap_ThisBoard();
+		const lmic_pinmap lmic_pins = {
+			.nss = 18,
+			.rxtx = LMIC_UNUSED_PIN,
+			.rst = 14,
+			.dio = {26, 35, 34},
+		};
+
+#endif
+
+#if defined(ESP32) and not defined(ARDUINO_HELTEC_WIFI_LORA_32_V2) and not defined(ARDUINO_TTGO_LoRa32_v21new)
+
+		const lmic_pinmap lmic_pins = {
+			.nss = 5,
+			.rxtx = LMIC_UNUSED_PIN,
+			.rst = 14,
+			.dio = {26, 35, 34},
+		};
+
+		// 		    lmic_pinmap lmic_pins = {
+		//     .nss = 15,
+		//     .rxtx = LMIC_UNUSED_PIN,
+		//     .rst = LMIC_UNUSED_PIN,
+		//     .dio = {5, 4, LMIC_UNUSED_PIN},
+		//     // optional: set polarity of rxtx pin.
+		//     .rxtx_rx_active = 0,
+		//     // optional: set RSSI cal for listen-before-talk
+		//     // this value is in dB, and is added to RSSI
+		//     // measured prior to decision.
+		//     // Must include noise guardband! Ignored in US,
+		//     // EU, IN, other markets where LBT is not required.
+		//     .rssi_cal = 10,
+		//     // optional: override LMIC_SPI_FREQ if non-zero
+		//     .spi_freq = 1000000,
+		//   };
+
+		//const lmic_pinmap *pPinMap = &lmic_pins;
+
+#endif
+
+	//  if (pPinMap == nullptr) {
+
+	//  Debug.println(F("Board not known to library; add pinmap or update getconfig_thisboard.cpp"));
+
+	// }
+
+		//os_init_ex(pPinMap);
+		os_init();
+
+		LMIC_reset();
+		// allow much more clock error than the X/1000 default. See:
+		// https://github.com/mcci-catena/arduino-lorawan/issues/74#issuecomment-462171974
+		// https://github.com/mcci-catena/arduino-lmic/commit/42da75b56#diff-16d75524a9920f5d043fe731a27cf85aL633
+		// the X/1000 means an error rate of 0.1%; the above issue discusses using values up to 10%.
+		// so, values from 10 (10% error, the most lax) to 1000 (0.1% error, the most strict) can be used.
+
+		LMIC_setClockError(1 * MAX_CLOCK_ERROR / 40);
+
+		LMIC_setLinkCheckMode(0);
+		LMIC_setDrTxpow(DR_SF7, 14); //BONNE OPTION????
+
+		//Set the data rate to Spreading Factor 7.  This is the fastest supported rate for 125 kHz channels, and it
+		// minimizes air time and battery power. Set the transmission power to 14 dBi (25 mW).
+
+		// Start job (sending automatically starts OTAA too)
+
+		//No send in setup for data consistency
+
+		//Debug.println("First send");
+		//do_send(&sendjob);
+	}
 }
 
-void loop()
+/*****************************************************************
+ * And action                                                    *
+ *****************************************************************/
+void loop(void)
 {
-  os_runloop_once();
-}
+	String result_PPD, result_SDS, result_PMS, result_HPM, result_NPM;
+	String result_GPS, result_DNMS;
 
+	unsigned sum_send_time = 0;
+
+	act_micro = micros();
+	act_milli = millis();
+	send_now = msSince(starttime) > cfg::sending_intervall_ms;
+
+	// Wait at least 30s for each NTP server to sync
+
+	if (cfg::has_wifi)
+	{
+		if (!sntp_time_set && send_now && msSince(time_point_device_start_ms) < 1000 * 2 * 30 + 5000)
+		{
+			debug_outln_info(F("NTP sync not finished yet, skipping send"));
+			send_now = false;
+			starttime = act_milli;
+		}
+	}
+
+	sample_count++;
+	if (last_micro != 0)
+	{
+		unsigned long diff_micro = act_micro - last_micro;
+		UPDATE_MIN_MAX(min_micro, max_micro, diff_micro);
+	}
+	last_micro = act_micro;
+
+	if (cfg::npm_read)
+	{
+		if ((msSince(starttime_NPM) > SAMPLETIME_NPM_MS) || send_now)
+		{
+			starttime_NPM = act_milli;
+			fetchSensorNPM(result_NPM);
+		}
+	}
+
+	if (cfg::sds_read)
+	{
+		if ((msSince(starttime_SDS) > SAMPLETIME_SDS_MS) || send_now)
+		{
+			starttime_SDS = act_milli;
+			fetchSensorSDS(result_SDS);
+		}
+	}
+
+	if (cfg::gps_read && !gps_init_failed)
+	{
+		// process serial GPS data..
+		while (serialGPS->available() > 0)
+		{
+			gps.encode(serialGPS->read());
+		}
+
+		if ((msSince(starttime_GPS) > SAMPLETIME_GPS_MS) || send_now)
+		{
+			// getting GPS coordinates
+			fetchSensorGPS(result_GPS);
+			starttime_GPS = act_milli;
+		}
+	}
+
+	//if ((msSince(last_display_millis) > DISPLAY_UPDATE_INTERVAL_MS) && (cfg::has_display && cfg::has_ssd1306 ))
+	if ((msSince(last_display_millis) > DISPLAY_UPDATE_INTERVAL_MS) && (cfg::has_ssd1306))
+
+	{
+		display_values();
+		last_display_millis = act_milli;
+	}
+
+	server.handleClient();
+	yield();
+
+	if (send_now)
+	{
+
+		void *SpActual = NULL;
+		Debug.printf("Free Stack at send_now is: %d \r\n", (uint32_t)&SpActual - (uint32_t)StackPtrEnd);
+
+		if (cfg::has_wifi)
+		{
+
+			last_signal_strength = WiFi.RSSI();
+			RESERVE_STRING(data, LARGE_STR);
+			data = FPSTR(data_first_part);
+			RESERVE_STRING(result, MED_STR);
+
+			void *SpActual = NULL;
+			Debug.printf("Free Stack at sendSensorCommunity is: %d \r\n", (uint32_t)&SpActual - (uint32_t)StackPtrEnd);
+
+			if (cfg::sds_read)
+			{
+				data += result_SDS;
+				sum_send_time += sendSensorCommunity(result_SDS, SDS_API_PIN, FPSTR(SENSORS_SDS011), "SDS_");
+			}
+			if (cfg::npm_read)
+			{
+				data += result_NPM;
+				sum_send_time += sendSensorCommunity(result_NPM, NPM_API_PIN, FPSTR(SENSORS_NPM), "NPM_");
+				Debug.println(data);
+			}
+
+			if (cfg::bmx280_read && (!bmx280_init_failed))
+			{
+				// getting temperature, humidity and pressure (optional)
+				fetchSensorBMX280(result);
+				data += result;
+				if (bmx280.sensorID() == BME280_SENSOR_ID)
+				{
+					sum_send_time += sendSensorCommunity(result, BME280_API_PIN, FPSTR(SENSORS_BME280), "BME280_");
+				}
+				else
+				{
+					sum_send_time += sendSensorCommunity(result, BMP280_API_PIN, FPSTR(SENSORS_BMP280), "BMP280_");
+				}
+				result = emptyString;
+				Debug.println(data);
+			}
+
+			if (cfg::gps_read)
+			{
+				data += result_GPS;
+				sum_send_time += sendSensorCommunity(result_GPS, GPS_API_PIN, F("GPS"), "GPS_");
+				result = emptyString;
+			}
+
+			add_Value2Json(data, F("samples"), String(sample_count));
+			add_Value2Json(data, F("min_micro"), String(min_micro));
+			add_Value2Json(data, F("max_micro"), String(max_micro));
+			add_Value2Json(data, F("interval"), String(cfg::sending_intervall_ms));
+			add_Value2Json(data, F("signal"), String(last_signal_strength));
+
+			if ((unsigned)(data.lastIndexOf(',') + 1) == data.length())
+			{
+				data.remove(data.length() - 1);
+			}
+			data += "]}";
+
+			yield();
+			Debug.println(data);
+			sum_send_time += sendDataToOptionalApis(data);
+
+			//json example for WiFi transmission
+
+			//{"software_version" : "Nebulo-V1-122021", "sensordatavalues" : [ {"value_type" : "NPM_P0", "value" : "1.84"}, {"value_type" : "NPM_P1", "value" : "2.80"}, {"value_type" : "NPM_P2", "value" : "2.06"}, {"value_type" : "NPM_N1", "value" : "27.25"}, {"value_type" : "NPM_N10", "value" : "27.75"}, {"value_type" : "NPM_N25", "value" : "27.50"}, {"value_type" : "BME280_temperature", "value" : "20.84"}, {"value_type" : "BME280_pressure", "value" : "99220.03"}, {"value_type" : "BME280_humidity", "value" : "61.66"}, {"value_type" : "samples", "value" : "138555"}, {"value_type" : "min_micro", "value" : "933"}, {"value_type" : "max_micro", "value" : "351024"}, {"value_type" : "interval", "value" : "145000"}, {"value_type" : "signal", "value" : "-71"} ]}
+
+			// https://en.wikipedia.org/wiki/Moving_average#Cumulative_moving_average
+			sending_time = (3 * sending_time + sum_send_time) / 4;
+			if (sum_send_time > 0)
+			{
+				debug_outln_info(F("Time for Sending (ms): "), String(sending_time));
+			}
+
+			// reconnect to WiFi if disconnected
+			if (WiFi.status() != WL_CONNECTED)
+			{
+				debug_outln_info(F("Connection lost, reconnecting "));
+				WiFi_error_count++;
+				WiFi.reconnect();
+				waitForWifiToConnect(20);
+			}
+
+			// only do a restart after finishing sending
+			if (msSince(time_point_device_start_ms) > DURATION_BEFORE_FORCED_RESTART_MS)
+			{
+				sensor_restart();
+			}
+
+			// Resetting for next sampling
+			last_data_string = std::move(data);
+			sample_count = 0;
+			last_micro = 0;
+			min_micro = 1000000000;
+			max_micro = 0;
+			sum_send_time = 0;
+			starttime = millis(); // store the start time
+			count_sends++;
+		}
+
+		if (cfg::has_lora)
+		{
+			prepareTxFrame();
+
+			void *SpActual = NULL;
+			Debug.printf("Free Stack at before send LoRaWAN is: %d \r\n", (uint32_t)&SpActual - (uint32_t)StackPtrEnd);
+
+			//Refresh data to send after measurement
+			do_send(&sendjob);
+
+			os_runloop_once();
+
+			starttime = millis(); // store the start time
+			count_sends++;
+		}
+	}
+
+	if (sample_count % 500 == 0)
+	{
+		//		Serial.println(ESP.getFreeHeap(),DEC);
+	}
+}
