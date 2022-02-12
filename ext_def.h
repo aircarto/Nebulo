@@ -16,9 +16,22 @@ const char WWW_PASSWORD[] PROGMEM = "";
 
 #define HAS_WIFI 1
 #define HAS_LORA 0
-const char APPEUI[] = "0000000000000000";
-const char DEVEUI [] = "0000000000000000";
-const char APPKEY[] = "00000000000000000000000000000000";
+const char APPEUI[] = "0100000000000000";
+const char DEVEUI [] = "70B3D57ED004B120";
+const char APPKEY[] = "D8667367328BE4C820847A56E9AD3B64";
+
+
+
+
+// // Application Identifier (u1_t[8]) in lsb format
+// #define OTAA_DEVEUI 0x20, 0xB1, 0x04, 0xD0, 0x7E, 0xD5, 0xB3, 0x70
+
+// // Application Identifier (u1_t[8]) in lsb format
+// #define OTAA_APPEUI 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01
+
+// // Application Key (u1_t[16]) in msb format
+// #define OTAA_APPKEY 0xD8, 0x66, 0x73, 0x67, 0x32, 0x8B, 0xE4, 0xC8, 0x20, 0x84, 0x7A, 0x56, 0xE9, 0xAD, 0x3B, 0x64
+
 
 // Where to send the data?
 #define SEND2SENSORCOMMUNITY 0
