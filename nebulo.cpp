@@ -2603,9 +2603,9 @@ static void fetchSensorNPM(String &s)
 						debug_outln_verbose(F("PM2.5 (μg/m3): "), String(pm25_serial / 10.0f));
 						debug_outln_verbose(F("PM10 (μg/m3) : "), String(pm10_serial / 10.0f));
 
-						debug_outln_verbose(F("PM1 (pcs/mL) : "), String(N1_serial));
-						debug_outln_verbose(F("PM2.5 (pcs/mL): "), String(N25_serial));
-						debug_outln_verbose(F("PM10 (pcs/mL) : "), String(N10_serial));
+						debug_outln_verbose(F("PM1 (pcs/L) : "), String(N1_serial));
+						debug_outln_verbose(F("PM2.5 (pcs/L): "), String(N25_serial));
+						debug_outln_verbose(F("PM10 (pcs/L) : "), String(N10_serial));
 
 						npm_pm1_sum += pm1_serial;
 						npm_pm25_sum += pm25_serial;
