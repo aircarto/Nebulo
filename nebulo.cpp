@@ -2671,9 +2671,9 @@ static void fetchSensorNPM(String &s)
 			last_value_NPM_P1 = float(npm_pm10_sum) / (npm_val_count * 10.0f);
 			last_value_NPM_P2 = float(npm_pm25_sum) / (npm_val_count * 10.0f);
 
-			last_value_NPM_N0 = float(npm_pm1_sum_pcs) / npm_val_count;
-			last_value_NPM_N1 = float(npm_pm10_sum_pcs) / npm_val_count;
-			last_value_NPM_N2 = float(npm_pm25_sum_pcs) / npm_val_count;
+			last_value_NPM_N0 = float(npm_pm1_sum_pcs) / (npm_val_count * 1000.0f);
+			last_value_NPM_N1 = float(npm_pm10_sum_pcs) / (npm_val_count * 1000.0f);
+			last_value_NPM_N2 = float(npm_pm25_sum_pcs) / (npm_val_count * 1000.0f);
 
 			add_Value2Json(s, F("NPM_P0"), F("PM1: "), last_value_NPM_P0);
 			add_Value2Json(s, F("NPM_P1"), F("PM10:  "), last_value_NPM_P1);
