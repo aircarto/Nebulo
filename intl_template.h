@@ -12,6 +12,7 @@ const char INTL_SENSORS[] PROGMEM = "";
 const char INTL_MORE_SENSORS[] PROGMEM = "";
 const char INTL_SDS011[] PROGMEM = "";
 const char INTL_NPM[] PROGMEM = "";
+const char INTL_NPM_FULLTIME[] PROGMEM = "";
 const char INTL_BMX280[] PROGMEM = "";
 const char INTL_HEIGHT_ABOVE_SEALEVEL[] PROGMEM = "";
 const char INTL_PRESSURE_AT_SEALEVEL[] PROGMEM = "";

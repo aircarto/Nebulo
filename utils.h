@@ -66,7 +66,8 @@ enum class PmSensorCmd2 { // for NPM
 	Change,
 	Concentration,
 	Version,
-	Speed
+	Speed,
+	Temphumi
 };
 
 /*****************************************************************
@@ -110,9 +111,10 @@ extern void NPM_cmd(PmSensorCmd2 cmd);
 extern bool NPM_checksum_valid_4(const uint8_t (&data)[4]);
 extern bool NPM_checksum_valid_5(const uint8_t (&data)[5]);
 extern bool NPM_checksum_valid_6(const uint8_t (&data)[6]);
+extern bool NPM_checksum_valid_8(const uint8_t (&data)[8]);
 extern bool NPM_checksum_valid_16(const uint8_t (&data)[16]);
 extern void NPM_data_reader(uint8_t data[], size_t size);
-extern void NPM_state(uint8_t bytedata);
+extern String NPM_state(uint8_t bytedata);
 
 extern bool isNumeric(const String& str);
 

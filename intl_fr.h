@@ -12,6 +12,7 @@ const char INTL_SENSORS[] PROGMEM = "Capteurs";
 const char INTL_MORE_SENSORS[] PROGMEM = "Autres capteurs";
 const char INTL_SDS011[] PROGMEM = "SDS011 ({pm})";
 const char INTL_NPM[] PROGMEM = "Tera Sensor Next PM ({pm})";
+const char INTL_NPM_FULLTIME[] PROGMEM = "Next PM permanent";
 const char INTL_BMX280[] PROGMEM = "BME280 ({t}, {h}, {p}), BMP280 ({t}, {p})";
 const char INTL_HEIGHT_ABOVE_SEALEVEL[] PROGMEM = "Altitude (m)";
 const char INTL_PRESSURE_AT_SEALEVEL[] PROGMEM = "Pression au niveau de la mer (hPa)";

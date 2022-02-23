@@ -167,6 +167,7 @@ static const char URL_CUSTOM2[] PROGMEM = "/data.php";
 
 // Tera Sensor Next PM sensor
 #define NPM_READ 1
+#define NPM_FULLTIME 0
 #define NPM_API_PIN 1
 
 // BMP280/BME280, temperature, pressure (humidity on BME280)
