@@ -78,7 +78,6 @@ namespace cfg
 	// (in)active sensors
 	bool sds_read = SDS_READ;
 	bool npm_read = NPM_READ;
-	bool npm_fulltime = NPM_READ;
 	bool npm_fulltime = NPM_FULLTIME;
 	bool bmx280_read = BMX280_READ;
 	char height_above_sealevel[8] = "0";
