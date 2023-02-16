@@ -4362,7 +4362,7 @@ void os_getDevKey(u1_t *buf) { memcpy_P(buf, appkey_hex, 16); }
 //Initialiser avec les valeurs -1.0,-128.0 = valeurs par défaut qui doivent être filtrées
 
 uint8_t datalora[25] = {0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x80, 0xff, 0xff, 0xff};
-//		    			conf |   sds	|	 sds    |    npm   | 	 npm   | 	npm	   |   npm	   |	npm	   |	npm	     |	 cov    |    temp  | humi |   press   |
+//		    			conf |   sds	|	 sds    |    npm   | 	 npm   | 	npm	   |   npm	   |	npm	   |	npm	     |	 cov    |    temp   | humi |   press   |
 
 //Peut-être changer l'indianess pour temp = inverser
 
@@ -4376,7 +4376,7 @@ uint8_t datalora[25] = {0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x
 // 0xff, 0xff, npm_nc -1
 // 0xff, 0xff, npm_nc -1
 // 0xff, 0xff, cov -1
-// 0x80, temp -128
+// 0xff, 0x80, temp -128
 // 0xff, rh -1
 // 0xff, 0xff, p -1
 
