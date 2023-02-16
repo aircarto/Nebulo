@@ -4361,8 +4361,8 @@ void os_getDevKey(u1_t *buf) { memcpy_P(buf, appkey_hex, 16); }
 
 //Initialiser avec les valeurs -1.0,-128.0 = valeurs par défaut qui doivent être filtrées
 
-uint8_t datalora[32] = {0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x80, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-//		    			conf |   sds	|	 sds    |    npm   | 	 npm   | 	npm	   |   npm	   |	npm	   |	npm	     |	 cov    |    temp  | humi |   press   |       lat            |       lon             | 
+uint8_t datalora[25] = {0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x80, 0xff, 0xff, 0xff};
+//		    			conf |   sds	|	 sds    |    npm   | 	 npm   | 	npm	   |   npm	   |	npm	   |	npm	     |	 cov    |    temp  | humi |   press   |
 
 //Peut-être changer l'indianess pour temp = inverser
 
@@ -4379,8 +4379,6 @@ uint8_t datalora[32] = {0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x
 // 0x80, temp -128
 // 0xff, rh -1
 // 0xff, 0xff, p -1
-// 0x00, 0x00, 0x00, 0x00, lat 0.0 float
-// 0x00, 0x00, 0x00, 0x00, lon 0.0 float
 
 const unsigned TX_INTERVAL = (cfg::sending_intervall_ms) / 1000;
 
@@ -4571,19 +4569,6 @@ void onEvent(ev_t ev)
 			Debug.print(F("Received "));
 			Debug.print(LMIC.dataLen);
 			Debug.println(F(" bytes of payload"));
-
-			Debug.println(F("Downlink payload:"));
-			for (int i = 0; i < LMIC.dataLen; i++)
-			{
-				Debug.print(" ");
-				Debug.print(LMIC.frame[LMIC.dataBeg + i], HEX);
-				arrayDownlink[i] = LMIC.frame[LMIC.dataBeg + i];
-				if (i == 8)
-				{
-					Debug.printf("\n");
-					getDataLora(arrayDownlink);
-				}
-			}
 		}
 
 		lora_connection_lost = false;
@@ -4654,17 +4639,17 @@ static void prepareTxFrame()
 		byte temp_byte[2];
 	} u1;
 
-	union uint16_2_byte
-	{
-		uint16_t temp_uint;
-		byte temp_byte[2];
-	} u2;
+	// union uint16_2_byte
+	// {
+	// 	uint16_t temp_uint;
+	// 	byte temp_byte[2];
+	// } u2;
 
-	union float_2_byte
-	{
-		float temp_float;
-		byte temp_byte[4];
-	} u3;
+	// union float_2_byte
+	// {
+	// 	float temp_float;
+	// 	byte temp_byte[4];
+	// } u3;
 
 	//Take care of the signed/unsigned and endianess
 
@@ -4772,25 +4757,11 @@ static void prepareTxFrame()
 	datalora[22] = u1.temp_byte[1];
 	datalora[23] = u1.temp_byte[0];
 
-	u3.temp_float = atof(cfg::latitude);
-
-	datalora[24] = u3.temp_byte[0];
-	datalora[25] = u3.temp_byte[1];
-	datalora[26] = u3.temp_byte[2];
-	datalora[27] = u3.temp_byte[3];
-
-	u3.temp_float = atof(cfg::longitude);
-
-	datalora[28] = u3.temp_byte[0];
-	datalora[29] = u3.temp_byte[1];
-	datalora[30] = u3.temp_byte[2];
-	datalora[31] = u3.temp_byte[3];
-
 	Debug.printf("HEX values:\n");
-	for (int i = 0; i < 31; i++)
+	for (int i = 0; i < 24; i++)
 	{
 		Debug.printf(" %02x", datalora[i]);
-		if (i == 31) //ou 30?
+		if (i == 23) //ou 22?
 		{
 			Debug.printf("\n");
 		}
