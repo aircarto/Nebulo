@@ -56,6 +56,7 @@ enum ConfigShapeId {
 	Config_has_led_connect,
 	Config_brightness,
 	Config_value_displayed,
+	Config_rgpd,
 	Config_display_measure,
 	Config_display_wifi_info,
 	Config_display_lora_info,
@@ -108,6 +109,7 @@ static constexpr char CFG_KEY_HAS_LED_VALUE[] PROGMEM = "has_led_value";
 static constexpr char CFG_KEY_HAS_LED_CONNECT[] PROGMEM = "has_led_connect";
 static constexpr char CFG_KEY_BRIGHTNESS[] PROGMEM = "brightness";
 static constexpr char CFG_KEY_VALUE_DISPLAYED[] PROGMEM = "value_displayed";
+static constexpr char CFG_KEY_RGPD[] PROGMEM = "rgpd";
 static constexpr char CFG_KEY_DISPLAY_MEASURE[] PROGMEM = "display_measure";
 static constexpr char CFG_KEY_DISPLAY_WIFI_INFO[] PROGMEM = "display_wifi_info";
 static constexpr char CFG_KEY_DISPLAY_LORA_INFO[] PROGMEM = "display_lora_info";
@@ -160,6 +162,7 @@ static constexpr ConfigShapeEntry configShape[] PROGMEM = {
 	{ Config_Type_Bool, 0, CFG_KEY_HAS_LED_CONNECT, &cfg::has_led_connect },
 	{ Config_Type_UInt, 0, CFG_KEY_BRIGHTNESS, &cfg::brightness },
 	{ Config_Type_UInt, 0, CFG_KEY_VALUE_DISPLAYED, &cfg::value_displayed },
+	{ Config_Type_Bool, 0, CFG_KEY_RGPD, &cfg::rgpd },
 	{ Config_Type_Bool, 0, CFG_KEY_DISPLAY_MEASURE, &cfg::display_measure },
 	{ Config_Type_Bool, 0, CFG_KEY_DISPLAY_WIFI_INFO, &cfg::display_wifi_info },
 	{ Config_Type_Bool, 0, CFG_KEY_DISPLAY_LORA_INFO, &cfg::display_lora_info },

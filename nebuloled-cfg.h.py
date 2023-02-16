@@ -31,6 +31,7 @@ Bool        has_led_value
 Bool        has_led_connect
 UInt		brightness
 UInt        value_displayed
+Bool        rgpd
 Bool		display_measure
 Bool		display_wifi_info
 Bool		display_lora_info

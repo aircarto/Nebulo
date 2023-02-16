@@ -105,6 +105,7 @@ namespace cfg
 	bool has_led_value = HAS_LED_VALUE;
 	bool has_led_connect = HAS_LED_CONNECT;
 	unsigned brightness = BRIGHTNESS;
+	bool rgpd = RGPD;
 	unsigned value_displayed = VALUE_DISPLAYED;
 	bool display_measure = DISPLAY_MEASURE;
 	bool display_wifi_info = DISPLAY_WIFI_INFO;
@@ -165,10 +166,10 @@ bool configlorawan[8] = {false, false, false, false, false, false, false, false}
 // configlorawan[1] = cfg::npm_read ;
 // configlorawan[2] = cfg::bmx_read;
 // configlorawan[3] = cfg::ccs811_read;
-// configlorawan[4] = cfg::has_wifi;
-// configlorawan[5] = ;
-// configlorawan[6] = ;
-// configlorawan[7] = ;
+// configlorawan[4] = cfg::has_led_value;
+// configlorawan[5] = cfg::has_led_connect;
+// configlorawan[6] = cfg::rgpd;
+// configlorawan[7] = cfg::has_wifi;
 
 static byte booltobyte(bool array[8])
 {
@@ -363,7 +364,7 @@ struct RGB interpolateindice(int valueIndice, bool correction)
 	return result;
 }
 
-struct RGB interpolate(float valueSensor, int step1, int step2, int step3, int step4, int step5, bool correction)
+struct RGB interpolatePM(float valueSensor, int step1, int step2, int step3, int step4, int step5, bool correction)
 {
 
 	byte endColorValueR;
@@ -475,7 +476,7 @@ struct RGB interpolate(float valueSensor, int step1, int step2, int step3, int s
 	return result;
 }
 
-struct RGB interpolateint2(float valueSensor, int step1, int step2, bool correction)
+struct RGB interpolateCOV(float valueSensor, int step1, int step2, bool correction)
 {
 
 	struct RGB result;
@@ -526,7 +527,7 @@ struct RGB interpolateint2(float valueSensor, int step1, int step2, bool correct
 	return result;
 }
 
-struct RGB interpolateint3(float valueSensor, int step1, int step2, bool correction) // Humi
+struct RGB interpolateHumi(float valueSensor, int step1, int step2, bool correction) // Humi
 {
 
 	struct RGB result;
@@ -576,7 +577,60 @@ struct RGB interpolateint3(float valueSensor, int step1, int step2, bool correct
 	return result;
 }
 
-struct RGB interpolateint4(float valueSensor, int step1, int step2, bool correction) // temp
+//REVOIR LE GRADIENT POUR LA PRESSION
+
+struct RGB interpolatePress(float valueSensor, int step1, int step2, bool correction) // Humi
+{
+
+	struct RGB result;
+	uint16_t rgb565;
+
+	if (valueSensor == 0)
+	{
+
+		result.R = 255;
+		result.G = 0; // red
+		result.B = 0;
+	}
+	else if (valueSensor > 0 && valueSensor < step1)
+	{
+		result.R = 255;
+		result.G = 0; // red
+		result.B = 0;
+	}
+	else if (valueSensor >= step1 && valueSensor < step2)
+	{
+		result.R = 0;
+		result.G = 255; // green
+		result.B = 0;
+	}
+	else if (valueSensor > step2)
+	{
+		result.R = 255;
+		result.G = 0; // red
+		result.B = 0;
+	}
+	else
+	{
+		result.R = 0;
+		result.G = 0;
+		result.B = 0;
+	}
+
+	if (correction == true)
+	{
+		result.R = pgm_read_byte(&gamma8[result.R]);
+		result.G = pgm_read_byte(&gamma8[result.G]);
+		result.B = pgm_read_byte(&gamma8[result.B]);
+	}
+
+	rgb565 = ((result.R & 0b11111000) << 8) | ((result.G & 0b11111100) << 3) | (result.B >> 3);
+	//Debug.println(rgb565); // to get list of color if drawGradient is acitvated
+	return result;
+}
+
+
+struct RGB interpolateTemp(float valueSensor, int step1, int step2, bool correction) // temp
 {
 
 	struct RGB result;
@@ -1831,6 +1885,7 @@ static void webserver_config_send_body_get(String &page_content)
 					  "<input class='radio' id='r4' name='group' type='radio'>"
 					  "<input class='radio' id='r5' name='group' type='radio'>"
 					  "<input class='radio' id='r6' name='group' type='radio'>"
+					  "<input class='radio' id='r7' name='group' type='radio'>"
 					  "<div class='tabs'>"
 					  "<label class='tab' id='tab1' for='r1'>");
 	page_content += FPSTR(INTL_WIFI_SETTINGS);
@@ -1849,6 +1904,9 @@ static void webserver_config_send_body_get(String &page_content)
 	page_content += F("</label>"
 					  "<label class='tab' id='tab6' for='r6'>");
 	page_content += FPSTR(INTL_APIS);
+	page_content += F("</label>"
+					  "<label class='tab' id='tab7' for='r7'>");
+	page_content += FPSTR(INTL_RGPD);
 	page_content += F("</label></div>"
 					  "<div class='panels'>"
 					  "<div class='panel' id='panel1'>");
@@ -2037,8 +2095,16 @@ static void webserver_config_send_body_get(String &page_content)
 	add_form_input(page_content, Config_port_custom2, FPSTR(INTL_PORT2), MAX_PORT_DIGITS2);
 	add_form_input(page_content, Config_user_custom2, FPSTR(INTL_USER2), LEN_USER_CUSTOM2 - 1);
 	add_form_input(page_content, Config_pwd_custom2, FPSTR(INTL_PASSWORD2), LEN_CFG_PASSWORD2 - 1);
-	page_content += FPSTR(TABLE_TAG_CLOSE_BR);
+	
 
+
+	page_content = tmpl(FPSTR(WEB_DIV_PANEL), String(7));
+
+	//AJOUTER TEXTE, LIEN etc.
+
+	add_form_checkbox(Config_rgpd, FPSTR(INTL_RGPD_ACCEPT));
+
+	page_content += FPSTR(TABLE_TAG_CLOSE_BR);
 	page_content += F("</div></div>");
 	page_content += form_submit(FPSTR(INTL_SAVE_AND_RESTART));
 	page_content += FPSTR(BR_TAG);
@@ -2295,7 +2361,7 @@ static void webserver_values()
 
 	auto add_table_nc_value = [&page_content](const __FlashStringHelper *sensor, const __FlashStringHelper *param, const float value)
 	{
-		add_table_row_from_value(page_content, sensor, param, check_display_value(value, -1, 1, 0), F("#/cm³"));
+		add_table_row_from_value(page_content, sensor, param, check_display_value(value, -1, 1, 0), F("#/L"));
 	};
 
 	auto add_table_t_value = [&page_content](const __FlashStringHelper *sensor, const __FlashStringHelper *param, const float value)
@@ -3710,9 +3776,9 @@ static void fetchSensorNPM(String &s)
 			last_value_NPM_P1 = float(npm_pm10_sum) / (npm_val_count * 10.0f);
 			last_value_NPM_P2 = float(npm_pm25_sum) / (npm_val_count * 10.0f);
 
-			last_value_NPM_N1 = float(npm_pm1_sum_pcs) / (npm_val_count * 1000.0f);
-			last_value_NPM_N10 = float(npm_pm10_sum_pcs) / (npm_val_count * 1000.0f);
-			last_value_NPM_N25 = float(npm_pm25_sum_pcs) / (npm_val_count * 1000.0f);
+			last_value_NPM_N1 = float(npm_pm1_sum_pcs) / (npm_val_count); //enlevé * 1000.0f pour Litre
+			last_value_NPM_N10 = float(npm_pm10_sum_pcs) / (npm_val_count);
+			last_value_NPM_N25 = float(npm_pm25_sum_pcs) / (npm_val_count);
 
 			add_Value2Json(s, F("NPM_P0"), F("PM1: "), last_value_NPM_P0);
 			add_Value2Json(s, F("NPM_P1"), F("PM10:  "), last_value_NPM_P1);
@@ -4845,10 +4911,14 @@ void setup()
 
 	if (cfg::has_led_value || cfg::has_led_connect)
 	{
-
+		debug_outln_info(F("init FastLED"));
 		FastLED.addLeds<WS2812B, LED_PIN, GRB>(leds, LEDS_NB); //swap R and G !  //ATTENTION AU TYPE DE LED
-		FastLED.setBrightness(cfg::brightness);				   //max=255
-	}
+		FastLED.setBrightness(cfg::brightness);			   //max=255
+	 	displayColor_value = {0, 0, 0};
+		colorLED_value = CRGB(displayColor_value.R, displayColor_value.G, displayColor_value.B);
+		fill_solid(leds,LEDS_NB, colorLED_value);
+		FastLED.show();
+	 }
 
 	debug_outln_info(F("\nChipId: "), esp_chipid);
 
@@ -4940,10 +5010,10 @@ void setup()
 	configlorawan[1] = cfg::npm_read;
 	configlorawan[2] = cfg::bmx280_read;
 	configlorawan[3] = cfg::ccs811_read;
-	configlorawan[4] = cfg::has_wifi;
-	configlorawan[5] = false;
-	configlorawan[6] = false;
-	configlorawan[7] = false; //si connection manquée => false
+    configlorawan[4] = cfg::has_led_value;
+    configlorawan[5] = cfg::has_led_connect;
+    configlorawan[6] = cfg::rgpd;
+	configlorawan[7] = cfg::has_wifi;; //si connection manquée => false
 
 	//IL va falloir ajouter un byte pour RGPD?
 
@@ -5130,43 +5200,52 @@ if(cfg::has_led_value){
 	{
 	case 0:
 	if(cfg::npm_read && last_value_NPM_P0 != -1.0){
-	displayColor_value = interpolate(last_value_NPM_P0); // black pour SDS
+	displayColor_value = interpolatePM(last_value_NPM_P0, 10, 20, 25, 50, 75, gamma_correction);
 	}else{
-		displayColor_value{0, 0, 0}; //BLACK
+	displayColor_value = {0, 0, 0}; //BLACK
 	}
 		break;
 	case 1:
-displayColor_value = interpolate();
+	//ajouter tous les tests?
+	displayColor_value = interpolatePM(last_value_NPM_P1, 20, 40, 50, 100, 150, gamma_correction);
 		break;
 	case 2:
-displayColor_value = interpolate();
+	displayColor_value = interpolatePM(last_value_NPM_P2, 10, 20, 25, 50, 75, gamma_correction);
 		break;
 	case 3:
-displayColor_value = interpolate();
+	displayColor_value = interpolateTemp(last_value_BMX280_T, 19, 28, gamma_correction);
 		break;
 	case 4:
-displayColor_value = interpolate();
+	displayColor_value = interpolateHumi(last_value_BME280_H, 40, 60, gamma_correction);
 		break;
 	case 5:
-displayColor_value = interpolate();
+	displayColor_value = interpolatePress(last_value_BMX280_P, 40, 60, gamma_correction);
 		break;
 	case 6:
-displayColor_value = interpolate();	
+	displayColor_value = interpolateCOV(last_value_CCS811, 800, 1500, gamma_correction); //REVOIR
 		break;
 	}
+	
+	
 
     colorLED_value = CRGB(displayColor_value.R, displayColor_value.G, displayColor_value.B);
+
     FastLED.setBrightness(cfg::brightness);
-	fill_solid( &(leds[0]), 15 /*number of leds*/, colorLED_value );
+	// fill_solid( &(leds[0]), 15 /*number of leds*/, colorLED_value);
+	fill_solid(leds,LEDS_NB-1, colorLED_value);
+	FastLED.show();
 }
 
-if(cfg::has_led_connect){
-colorLED_connect = CRGB(displayColor_connect.R, displayColor_connect.G, displayColor_connect.B);
-FastLED.setBrightness(cfg::brightness);
-fill_solid( &(leds[15]), 1 /*number of leds*/, colorLED_connect );
-}
+// if(cfg::has_led_connect){
+// colorLED_connect = CRGB(displayColor_connect.R, displayColor_connect.G, displayColor_connect.B);
+// FastLED.setBrightness(cfg::brightness);
+// fill_solid( &(leds[15]), 1 /*number of leds*/, colorLED_connect);
+// FastLED.show();
+// }
 
-
+// if((!cfg::has_wifi && !cfg::has_lora) || (cfg::has_wifi && wifi_connection_lost && !cfg::has_lora ) || (cfg::has_lora && lora_connection_lost && !cfg::has_wifi)){drawImage(0, 0, 32, 64, interieur_no_connection);}
+// 			if(cfg::has_wifi && !wifi_connection_lost){drawImage(0, 0, 32, 64, interieur_wifi);}
+// 			if(cfg::has_lora && (!cfg::has_wifi || (cfg::has_wifi && wifi_connection_lost))&& !lora_connection_lost){drawImage(0, 0, 32, 64, interieur_lora);} //wifi prioritaire
 
 		yield();
 

@@ -18,8 +18,8 @@ const char WWW_PASSWORD[] PROGMEM = "";
 #define FS_SSID ""
 #define FS_PWD "nebuloledcfg"
 
-#define HAS_WIFI 1
-#define HAS_LORA 1
+#define HAS_WIFI 0
+#define HAS_LORA 0
 
 
 // const bool HAS_WIFI = true;
@@ -101,7 +101,7 @@ static const char URL_CUSTOM2[] PROGMEM = "/data.php";
 #define CO2_SERIAL_TX D27
 #define I2C_PIN_SCL D22
 #define I2C_PIN_SDA D21
-#define LED_PIN D2
+#define LED_PIN D33
 
 #endif
 
@@ -149,6 +149,7 @@ const char LONGITUDE[] PROGMEM = "5.369";
 #define HAS_LED_CONNECT 0
 #define LEDS_NB 16
 #define BRIGHTNESS 50
+#define RGPD 0
 #define GAMMA true
 #define VALUE_DISPLAYED 2
 
