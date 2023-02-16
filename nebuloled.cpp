@@ -3981,12 +3981,11 @@ static void display_values_oled() //COMPLETER LES ECRANS
 		break;
 	case 6:
 		display_header = F("Coordinates"); //REVOIR
-		display_lines[0] = "ID: ";
-		display_lines[0] += esp_chipid;
-		display_lines[1] = "FW: ";
-		display_lines[1] += SOFTWARE_VERSION;
-		display_lines[2] = F("Measurements: ");
-		display_lines[2] += String(count_sends);
+		display_lines[0] = "Lat.: ";
+		display_lines[0] += cfg::latitude;
+		display_lines[1] = "Lon.: ";
+		display_lines[1] += cfg::longitude;
+		display_lines[2] = emptyString;
 		break;
 	case 7:
 		display_header = FPSTR(SENSORS_NPM);
@@ -4362,13 +4361,8 @@ void os_getDevKey(u1_t *buf) { memcpy_P(buf, appkey_hex, 16); }
 
 //Initialiser avec les valeurs -1.0,-128.0 = valeurs par défaut qui doivent être filtrées
 
-//uint8_t datalora[31] = {0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x80, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff};
-
-// uint8_t datalora[37] = {0x00, 0xff, 0xff, 0xff, 0xff,0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x80, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff};
-// 			//			conf       sds		 sds         npm 		 npm		npm		    npm			npm			npm			co2			co2			 cov     temp  humi	   press
-
-uint8_t datalora[38] = {0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x80, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff};
-//		    conf|   sds	    |	 sds    |    npm   | 	 npm   | 	npm	   |   npm	   |	npm	   |	npm	   |	co2	   |	 co2   |	cov    |    temp  | humi|   press   |       lat             |       lon             | sel
+uint8_t datalora[32] = {0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x80, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+//		    			conf |   sds	|	 sds    |    npm   | 	 npm   | 	npm	   |   npm	   |	npm	   |	npm	     |	 cov    |    temp  | humi |   press   |       lat            |       lon             | 
 
 //Peut-être changer l'indianess pour temp = inverser
 
@@ -4381,15 +4375,12 @@ uint8_t datalora[38] = {0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x
 // 0xff, 0xff, npm_nc -1
 // 0xff, 0xff, npm_nc -1
 // 0xff, 0xff, npm_nc -1
-// 0xff, 0xff, co2 -1
-// 0xff, 0xff, co2 -1
 // 0xff, 0xff, cov -1
 // 0x80, temp -128
 // 0xff, rh -1
 // 0xff, 0xff, p -1
 // 0x00, 0x00, 0x00, 0x00, lat 0.0 float
 // 0x00, 0x00, 0x00, 0x00, lon 0.0 float
-// 0xff sel -1
 
 const unsigned TX_INTERVAL = (cfg::sending_intervall_ms) / 1000;
 
@@ -4397,9 +4388,9 @@ static osjob_t sendjob;
 
 #if defined(ARDUINO_ESP32_DEV) and defined(KIT_C)
 const lmic_pinmap lmic_pins = {
-	.nss = D5, //AUTRE  //D5 origine
+	.nss = D5, 
 	.rxtx = LMIC_UNUSED_PIN,
-	.rst = D0, //14 origine ou d12
+	.rst = D0,
 	.dio = {D26, D35, D34},
 };
 #endif
@@ -4408,8 +4399,7 @@ const lmic_pinmap lmic_pins = {
 const lmic_pinmap lmic_pins = {
 	.nss = D5,
 	.rxtx = LMIC_UNUSED_PIN,
-	//.rst = D14,
-	.rst = D2, //ou bien D0,D1 ?
+	.rst = D0,
 	.dio = {D26, D35, D34}};
 #endif
 
@@ -4419,18 +4409,6 @@ const lmic_pinmap lmic_pins = {
 	.rxtx = LMIC_UNUSED_PIN,
 	.rst = D14,
 	.dio = {/*dio0*/ D26, /*dio1*/ D35, /*dio2*/ D34},
-	.rxtx_rx_active = 0,
-	.rssi_cal = 10,
-	.spi_freq = 8000000 /* 8 MHz */
-};
-#endif
-
-#if defined(ARDUINO_TTGO_LoRa32_v21new)
-const lmic_pinmap lmic_pins = {
-	.nss = 18,
-	.rxtx = LMIC_UNUSED_PIN,
-	.rst = 23,
-	.dio = {/*dio0*/ 26, /*dio1*/ 33, /*dio2*/ 32},
 	.rxtx_rx_active = 0,
 	.rssi_cal = 10,
 	.spi_freq = 8000000 /* 8 MHz */
@@ -4774,47 +4752,45 @@ static void prepareTxFrame()
 
 	u1.temp_int = (int16_t)round(last_value_CCS811);
 
-	datalora[21] = u1.temp_byte[1];
-	datalora[22] = u1.temp_byte[0];
+	datalora[17] = u1.temp_byte[1];
+	datalora[18] = u1.temp_byte[0];
 
 	if (last_value_BMX280_T != -128.0)
 		u1.temp_int = (int16_t)round(last_value_BMX280_T * 10);
 	else
 		u1.temp_int = (int16_t)round(last_value_BMX280_T);
 
-	datalora[23] = u1.temp_byte[1];
-	datalora[24] = u1.temp_byte[0];
+	datalora[19] = u1.temp_byte[1];
+	datalora[20] = u1.temp_byte[0];
 
 	//datalora[23] = (int8_t)round(last_value_BMX280_T);
 
-	datalora[25] = (int8_t)round(last_value_BME280_H);
+	datalora[21] = (int8_t)round(last_value_BME280_H);
 
 	u1.temp_int = (int16_t)round(last_value_BMX280_P);
 
-	datalora[26] = u1.temp_byte[1];
-	datalora[27] = u1.temp_byte[0];
+	datalora[22] = u1.temp_byte[1];
+	datalora[23] = u1.temp_byte[0];
 
 	u3.temp_float = atof(cfg::latitude);
+
+	datalora[24] = u3.temp_byte[0];
+	datalora[25] = u3.temp_byte[1];
+	datalora[26] = u3.temp_byte[2];
+	datalora[27] = u3.temp_byte[3];
+
+	u3.temp_float = atof(cfg::longitude);
 
 	datalora[28] = u3.temp_byte[0];
 	datalora[29] = u3.temp_byte[1];
 	datalora[30] = u3.temp_byte[2];
 	datalora[31] = u3.temp_byte[3];
 
-	u3.temp_float = atof(cfg::longitude);
-
-	datalora[32] = u3.temp_byte[0];
-	datalora[33] = u3.temp_byte[1];
-	datalora[34] = u3.temp_byte[2];
-	datalora[35] = u3.temp_byte[3];
-
-	// datalora[36] = forecast_selector;
-
 	Debug.printf("HEX values:\n");
-	for (int i = 0; i < 37; i++)
+	for (int i = 0; i < 31; i++)
 	{
 		Debug.printf(" %02x", datalora[i]);
-		if (i == 36)
+		if (i == 31) //ou 30?
 		{
 			Debug.printf("\n");
 		}
@@ -5015,14 +4991,11 @@ void setup()
     configlorawan[6] = cfg::rgpd;
 	configlorawan[7] = cfg::has_wifi;; //si connection manquée => false
 
-	//IL va falloir ajouter un byte pour RGPD?
-
 	Debug.print("Configuration:");
 	Debug.println(booltobyte(configlorawan));
 	datalora[0] = booltobyte(configlorawan);
 
 	Debug.printf("End of void setup()\n");
-	//ajouter test stack cf. code
 }
 
 void loop()
