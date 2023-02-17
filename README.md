@@ -1,5 +1,9 @@
 # Nebulo V2
 
+![nebulo_logo](https://aircarto.fr/images/Logo_Nebulo2.png)
+
+New version of the air quality sensor Nebulo developped with [AtmoSud](https://www.atmosud.org/).
+
 ## Supported sensors
 * Nova PM SDS011 (PM2.5 and PM10)
 * Groupe Tera NextPM (PM1, PM2.5 and PM10)
@@ -44,13 +48,6 @@ The .ini file should be able to get all the needed boards, platforms and librari
 
 ## Pin mapping
 
-# NebuloV2
-
-![nebulo_logo](https://aircarto.fr/images/Logo_Nebulo2.png)
-
-New version of the air quality sensor Nebulo developped with [AtmoSud](https://www.atmosud.org/).
-
-## Pinout Reference
 
 |GPIO| devices | notes |
 |----|-----|-----|
