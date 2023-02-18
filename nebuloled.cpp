@@ -164,7 +164,7 @@ bool configlorawan[8] = {false, false, false, false, false, false, false, false}
 
 // configlorawan[0] = cfg::sds_read;
 // configlorawan[1] = cfg::npm_read ;
-// configlorawan[2] = cfg::bmx_read;
+// configlorawan[2] = cfg::bmx280_read;
 // configlorawan[3] = cfg::ccs811_read;
 // configlorawan[4] = cfg::has_led_value;
 // configlorawan[5] = cfg::has_led_connect;
@@ -629,7 +629,6 @@ struct RGB interpolatePress(float valueSensor, int step1, int step2, bool correc
 	return result;
 }
 
-
 struct RGB interpolateTemp(float valueSensor, int step1, int step2, bool correction) // temp
 {
 
@@ -725,7 +724,7 @@ unsigned long last_update_attempt;
 int last_update_returncode;
 int last_sendData_returncode;
 
-bool wifi_connection_lost; //INITIALISER PLSU TARD
+bool wifi_connection_lost;
 bool lora_connection_lost;
 
 /*****************************************************************
@@ -2095,8 +2094,6 @@ static void webserver_config_send_body_get(String &page_content)
 	add_form_input(page_content, Config_port_custom2, FPSTR(INTL_PORT2), MAX_PORT_DIGITS2);
 	add_form_input(page_content, Config_user_custom2, FPSTR(INTL_USER2), LEN_USER_CUSTOM2 - 1);
 	add_form_input(page_content, Config_pwd_custom2, FPSTR(INTL_PASSWORD2), LEN_CFG_PASSWORD2 - 1);
-	
-
 
 	page_content = tmpl(FPSTR(WEB_DIV_PANEL), String(7));
 
@@ -4386,7 +4383,7 @@ static osjob_t sendjob;
 
 #if defined(ARDUINO_ESP32_DEV) and defined(KIT_C)
 const lmic_pinmap lmic_pins = {
-	.nss = D5, 
+	.nss = D5,
 	.rxtx = LMIC_UNUSED_PIN,
 	.rst = D0,
 	.dio = {D26, D35, D34},
@@ -4860,12 +4857,12 @@ void setup()
 	{
 		debug_outln_info(F("init FastLED"));
 		FastLED.addLeds<WS2812B, LED_PIN, GRB>(leds, LEDS_NB); //swap R and G !  //ATTENTION AU TYPE DE LED
-		FastLED.setBrightness(cfg::brightness);			   //max=255
-	 	displayColor_value = {0, 0, 0};
+		FastLED.setBrightness(cfg::brightness);				   //max=255
+		displayColor_value = {0, 0, 0};
 		colorLED_value = CRGB(displayColor_value.R, displayColor_value.G, displayColor_value.B);
-		fill_solid(leds,LEDS_NB, colorLED_value);
+		fill_solid(leds, LEDS_NB, colorLED_value);
 		FastLED.show();
-	 }
+	}
 
 	debug_outln_info(F("\nChipId: "), esp_chipid);
 
@@ -4957,10 +4954,11 @@ void setup()
 	configlorawan[1] = cfg::npm_read;
 	configlorawan[2] = cfg::bmx280_read;
 	configlorawan[3] = cfg::ccs811_read;
-    configlorawan[4] = cfg::has_led_value;
-    configlorawan[5] = cfg::has_led_connect;
-    configlorawan[6] = cfg::rgpd;
-	configlorawan[7] = cfg::has_wifi;; //si connection manquée => false
+	configlorawan[4] = cfg::has_led_value;
+	configlorawan[5] = cfg::has_led_connect;
+	configlorawan[6] = cfg::rgpd;
+	configlorawan[7] = cfg::has_wifi;
+	; //si connection manquée => false
 
 	Debug.print("Configuration:");
 	Debug.println(booltobyte(configlorawan));
@@ -5134,62 +5132,118 @@ void loop()
 		}
 		data += "]}";
 
+		if (cfg::has_led_value)
+		{
 
+			switch (cfg::value_displayed)
+			{
+			case 0:
+				if (cfg::npm_read && last_value_NPM_P0 != -1.0)
+				{
+					displayColor_value = interpolatePM(last_value_NPM_P0, 10, 20, 25, 50, 75, gamma_correction);
+				}
+				else
+				{
+					displayColor_value = {0, 0, 0}; //BLACK
+				}
+				break;
+			case 1:
+				if (cfg::npm_read && last_value_NPM_P1 != -1.0)
+				{
+					displayColor_value = interpolatePM(last_value_NPM_P1, 20, 40, 50, 100, 150, gamma_correction);
+				}
+				else if (cfg::sds_read && last_value_SDS_P1 != -1.0)
+				{
+					displayColor_value = interpolatePM(last_value_SDS_P1, 20, 40, 50, 100, 150, gamma_correction);
+				}
+				else
+				{
+					displayColor_value = {0, 0, 0}; //BLACK
+				}
+				break;
+			case 2:
+				if (cfg::npm_read && last_value_NPM_P2 != -1.0)
+				{
+					displayColor_value = interpolatePM(last_value_NPM_P2, 10, 20, 25, 50, 75, gamma_correction);
+				}
+				else if (cfg::sds_read && last_value_SDS_P2 != -1.0)
+				{
+					displayColor_value = interpolatePM(last_value_SDS_P2, 10, 20, 25, 50, 75, gamma_correction);
+				}
+				else
+				{
+					displayColor_value = {0, 0, 0}; //BLACK
+				}
+				break;
+			case 3:
+				if (cfg::bmx280_read && last_value_BMX280_T != -1.0)
+				{
+					displayColor_value = interpolateTemp(last_value_BMX280_T, 19, 28, gamma_correction);
+				}
+				else
+				{
+					displayColor_value = {0, 0, 0}; //BLACK
+				}
+				break;
+			case 4:
+				if (cfg::bmx280_read && last_value_BME280_H != -1.0)
+				{
+					displayColor_value = interpolateHumi(last_value_BME280_H, 40, 60, gamma_correction);
+				}
+				else
+				{
+					displayColor_value = {0, 0, 0}; //BLACK
+				}
+				break;
+			case 5:
+				if (cfg::bmx280_read && last_value_BMX280_P != -1.0)
+				{
+					displayColor_value = interpolatePress(last_value_BMX280_P, 40, 60, gamma_correction);
+				}
+				else
+				{
+					displayColor_value = {0, 0, 0}; //BLACK
+				}
+				break;
+			case 6:
+				if (cfg::ccs811_read && last_value_CCS811 != -1.0)
+				{
+					displayColor_value = interpolateCOV(last_value_CCS811, 800, 1500, gamma_correction); //REVOIR GRadient
+				}
+				else
+				{
+					displayColor_value = {0, 0, 0}; //BLACK
+				}
+				break;
+			}
 
+			colorLED_value = CRGB(displayColor_value.R, displayColor_value.G, displayColor_value.B);
+			FastLED.setBrightness(cfg::brightness);
+			fill_solid(leds, LEDS_NB - 1, colorLED_value);
+			FastLED.show();
+		}
 
-		//ICI LED
-if(cfg::has_led_value){
+		if (cfg::has_led_connect)
+		{
 
-	switch (cfg::value_displayed)
-	{
-	case 0:
-	if(cfg::npm_read && last_value_NPM_P0 != -1.0){
-	displayColor_value = interpolatePM(last_value_NPM_P0, 10, 20, 25, 50, 75, gamma_correction);
-	}else{
-	displayColor_value = {0, 0, 0}; //BLACK
-	}
-		break;
-	case 1:
-	//ajouter tous les tests?
-	displayColor_value = interpolatePM(last_value_NPM_P1, 20, 40, 50, 100, 150, gamma_correction);
-		break;
-	case 2:
-	displayColor_value = interpolatePM(last_value_NPM_P2, 10, 20, 25, 50, 75, gamma_correction);
-		break;
-	case 3:
-	displayColor_value = interpolateTemp(last_value_BMX280_T, 19, 28, gamma_correction);
-		break;
-	case 4:
-	displayColor_value = interpolateHumi(last_value_BME280_H, 40, 60, gamma_correction);
-		break;
-	case 5:
-	displayColor_value = interpolatePress(last_value_BMX280_P, 40, 60, gamma_correction);
-		break;
-	case 6:
-	displayColor_value = interpolateCOV(last_value_CCS811, 800, 1500, gamma_correction); //REVOIR
-		break;
-	}
-	
-	
+			if ((!cfg::has_wifi && !cfg::has_lora) || (cfg::has_wifi && wifi_connection_lost && !cfg::has_lora) || (cfg::has_lora && lora_connection_lost && !cfg::has_wifi))
+			{
+				colorLED_connect = CRGB(0,0,0);
+			}
+			if (cfg::has_wifi && !wifi_connection_lost)
+			{
+				colorLED_connect = CRGB(255,255,255);
+			}
+			if (cfg::has_lora && (!cfg::has_wifi || (cfg::has_wifi && wifi_connection_lost)) && !lora_connection_lost)
+			{
+				colorLED_connect = CRGB(255,255,0);
+			} //wifi prioritaire
 
-    colorLED_value = CRGB(displayColor_value.R, displayColor_value.G, displayColor_value.B);
-
-    FastLED.setBrightness(cfg::brightness);
-	// fill_solid( &(leds[0]), 15 /*number of leds*/, colorLED_value);
-	fill_solid(leds,LEDS_NB-1, colorLED_value);
-	FastLED.show();
-}
-
-// if(cfg::has_led_connect){
-// colorLED_connect = CRGB(displayColor_connect.R, displayColor_connect.G, displayColor_connect.B);
-// FastLED.setBrightness(cfg::brightness);
-// fill_solid( &(leds[15]), 1 /*number of leds*/, colorLED_connect);
-// FastLED.show();
-// }
-
-// if((!cfg::has_wifi && !cfg::has_lora) || (cfg::has_wifi && wifi_connection_lost && !cfg::has_lora ) || (cfg::has_lora && lora_connection_lost && !cfg::has_wifi)){drawImage(0, 0, 32, 64, interieur_no_connection);}
-// 			if(cfg::has_wifi && !wifi_connection_lost){drawImage(0, 0, 32, 64, interieur_wifi);}
-// 			if(cfg::has_lora && (!cfg::has_wifi || (cfg::has_wifi && wifi_connection_lost))&& !lora_connection_lost){drawImage(0, 0, 32, 64, interieur_lora);} //wifi prioritaire
+			FastLED.setBrightness(cfg::brightness);
+			fill_solid(&(leds[15]), 1 /*number of leds*/, colorLED_connect);
+			leds[15]= colorLED_connect;
+			FastLED.show();
+		}
 
 		yield();
 
@@ -5218,7 +5272,6 @@ if(cfg::has_led_value){
 			//{"value_type" : "longitude", "value" : "5.36978"}
 			// ]}
 
-			// https://en.wikipedia.org/wiki/Moving_average#Cumulative_moving_average
 			sending_time = (3 * sending_time + sum_send_time) / 4;
 
 			if (sum_send_time > 0)
