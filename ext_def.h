@@ -143,7 +143,7 @@ const char LATITUDE[] PROGMEM = "43.296";
 const char LONGITUDE[] PROGMEM = "5.369";
 
 // OLED Display SSD1306
-#define HAS_SSD1306 1
+#define HAS_SSD1306 0
 #define DISPLAY_MEASURE 1
 #define HAS_LED_VALUE 0
 #define HAS_LED_CONNECT 0

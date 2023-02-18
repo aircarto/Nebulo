@@ -4022,9 +4022,6 @@ static void display_values_oled() //COMPLETER LES ECRANS
  *****************************************************************/
 static void init_display()
 {
-	if (cfg::has_ssd1306)
-
-	{
 
 #if defined(ARDUINO_TTGO_LoRa32_v21new)
 		oled_ssd1306 = new SSD1306Wire(0x3c, I2C_PIN_SDA, I2C_PIN_SCL);
@@ -4039,7 +4036,7 @@ static void init_display()
 #endif
 
 #if defined(ARDUINO_ESP32_DEV) and defined(KIT_C)
-		oled_ssd1306 = new SSD1306Wire(0x3c, I2C_PIN_SDA, I2C_PIN_SCL);
+		oled_ssd1306 = new SSD1306Wire(0x78, I2C_PIN_SDA, I2C_PIN_SCL);
 #endif
 
 		oled_ssd1306->init();
@@ -4055,7 +4052,6 @@ static void init_display()
 		// sensors.
 		Wire.setClock(100000);
 		// Wire.setClockStretchLimit(150000);
-	}
 }
 /*****************************************************************
  * Init BMP280/BME280                                            *
@@ -5125,6 +5121,7 @@ void loop()
 		add_Value2Json(data, F("signal"), String(last_signal_strength));
 		add_Value2Json(data, F("latitude"), String(cfg::latitude));
 		add_Value2Json(data, F("longitude"), String(cfg::longitude));
+		add_Value2Json(data, F("rgpd"), String(cfg::rgpd));
 
 		if ((unsigned)(data.lastIndexOf(',') + 1) == data.length())
 		{
@@ -5176,7 +5173,7 @@ void loop()
 				}
 				break;
 			case 3:
-				if (cfg::bmx280_read && last_value_BMX280_T != -1.0)
+				if (cfg::bmx280_read && last_value_BMX280_T != -128.0)
 				{
 					displayColor_value = interpolateTemp(last_value_BMX280_T, 19, 28, gamma_correction);
 				}
@@ -5225,6 +5222,10 @@ void loop()
 
 		if (cfg::has_led_connect)
 		{
+			// Debug.println(cfg::has_wifi);
+			// Debug.println(cfg::has_lora);
+			// Debug.println(wifi_connection_lost);
+			// Debug.println(lora_connection_lost);
 
 			if ((!cfg::has_wifi && !cfg::has_lora) || (cfg::has_wifi && wifi_connection_lost && !cfg::has_lora) || (cfg::has_lora && lora_connection_lost && !cfg::has_wifi))
 			{
