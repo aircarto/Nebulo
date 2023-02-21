@@ -2,8 +2,8 @@
 #define CURRENT_LANG INTL_LANG
 
 // Wifi config
-const char WLANSSID[] PROGMEM = "luftdaten";
-const char WLANPWD[] PROGMEM = "luftd4ten";
+const char WLANSSID[] PROGMEM = "EasyBox-550263";
+const char WLANPWD[] PROGMEM = "KmxrZeUtmgMKdEGa";
 
 
 #define TIME_FOR_WIFI_CONFIG 120000;
@@ -16,7 +16,7 @@ const char WWW_PASSWORD[] PROGMEM = "";
 
 // Sensor Wifi config (config mode)
 #define FS_SSID ""
-#define FS_PWD "nebuloledcfg"
+#define FS_PWD "nebuleaircfg"
 
 #define HAS_WIFI 0
 #define HAS_LORA 0
@@ -66,7 +66,7 @@ static const char NTP_SERVER_1[] PROGMEM = "ntp-p1.obspm.fr";
 static const char NTP_SERVER_2[] PROGMEM = "ntp.obspm.fr";
 
 // define own API
-static const char HOST_CUSTOM[] PROGMEM = "data.nebulo.fr";
+static const char HOST_CUSTOM[] PROGMEM = "data.nebulair.fr";
 static const char URL_CUSTOM[] PROGMEM = "/wifi.php";
 #define PORT_CUSTOM 80
 #define USER_CUSTOM ""
@@ -105,19 +105,6 @@ static const char URL_CUSTOM2[] PROGMEM = "/data.php";
 
 #endif
 
-#if defined(ARDUINO_HELTEC_WIFI_LORA_32_V2)
-
-#define I2C_SCREEN_SCL D15
-#define I2C_SCREEN_SDA D4
-#define OLED_RESET D16
-#define PM_SERIAL_RX D23
-#define PM_SERIAL_TX D17
-#define I2C_PIN_SCL D22
-#define I2C_PIN_SDA D21
-#define LED_PIN D2
-
-#endif
-
 // SDS011, the more expensive version of the particle sensor
 #define SDS_READ 0
 #define SDS_API_PIN 1
@@ -142,25 +129,13 @@ static const char URL_CUSTOM2[] PROGMEM = "/data.php";
 const char LATITUDE[] PROGMEM = "43.296";
 const char LONGITUDE[] PROGMEM = "5.369";
 
-// OLED Display SSD1306
-#define HAS_SSD1306 0
-#define DISPLAY_MEASURE 1
-#define HAS_LED_VALUE 0
-#define HAS_LED_CONNECT 0
+#define HAS_LED_VALUE 1
+#define HAS_LED_CONNECT 1
 #define LEDS_NB 16
 #define BRIGHTNESS 50
 #define RGPD 0
 #define GAMMA true
 #define VALUE_DISPLAYED 2
-
-// Show wifi info on displays
-#define DISPLAY_WIFI_INFO 1
-
-// Show wifi info on displays
-#define DISPLAY_LORA_INFO 0
-
-// Show device info on displays
-#define DISPLAY_DEVICE_INFO 1
 
 // Set debug level for serial output?
 #define DEBUG 5

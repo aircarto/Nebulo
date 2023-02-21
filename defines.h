@@ -1,7 +1,7 @@
 #define SENSOR_BASENAME "esp32-"
 
-#define SSID_BASENAME "nebuloled-"
-#define HOSTNAME_BASE "nebuloled-"
+#define SSID_BASENAME "nebuleair-"
+#define HOSTNAME_BASE "nebuleair-"
 
 #define LEN_CFG_STRING 65
 #define LEN_CFG_PASSWORD 65

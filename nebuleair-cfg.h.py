@@ -26,16 +26,11 @@ Bool		ssl_dusti
 Bool		send2madavi
 Bool		ssl_madavi
 Bool		send2csv
-Bool		has_ssd1306
 Bool        has_led_value
 Bool        has_led_connect
 UInt		brightness
 UInt        value_displayed
 Bool        rgpd
-Bool		display_measure
-Bool		display_wifi_info
-Bool		display_lora_info
-Bool		display_device_info
 UInt		debug
 Time		sending_intervall_ms
 Time		time_for_wifi_config
@@ -55,11 +50,11 @@ Password	pwd_custom2
 Bool		ssl_custom2
 """
 
-with open("nebuloled-cfg.h", "w") as h:
+with open("nebuleair-cfg.h", "w") as h:
     print("""
 
 // This file is generated, please do not edit.
-// Change nebuloled-cfg.h.py instead.
+// Change nebuleair-cfg.h.py instead.
 
 enum ConfigEntryType : unsigned short {
 	Config_Type_Bool,

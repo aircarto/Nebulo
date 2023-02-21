@@ -1,5 +1,5 @@
 #define INTL_LANG "EN"
-#define INTL_PM_SENSOR "Weather station Nebulo LED"
+#define INTL_PM_SENSOR "Weather station NebuleAir"
 const char INTL_CONFIGURATION[] PROGMEM = "Configuration";
 #define INTL_WIFI_NETWORKS "Loading wifi networks ..."
 #define INTL_LANGUAGE "Language"

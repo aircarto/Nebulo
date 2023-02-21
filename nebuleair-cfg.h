@@ -1,7 +1,7 @@
 
 
 // This file is generated, please do not edit.
-// Change nebuloled-cfg.h.py instead.
+// Change nebuleair-cfg.h.py instead.
 
 enum ConfigEntryType : unsigned short {
 	Config_Type_Bool,
@@ -51,16 +51,11 @@ enum ConfigShapeId {
 	Config_send2madavi,
 	Config_ssl_madavi,
 	Config_send2csv,
-	Config_has_ssd1306,
 	Config_has_led_value,
 	Config_has_led_connect,
 	Config_brightness,
 	Config_value_displayed,
 	Config_rgpd,
-	Config_display_measure,
-	Config_display_wifi_info,
-	Config_display_lora_info,
-	Config_display_device_info,
 	Config_debug,
 	Config_sending_intervall_ms,
 	Config_time_for_wifi_config,
@@ -104,16 +99,11 @@ static constexpr char CFG_KEY_SSL_DUSTI[] PROGMEM = "ssl_dusti";
 static constexpr char CFG_KEY_SEND2MADAVI[] PROGMEM = "send2madavi";
 static constexpr char CFG_KEY_SSL_MADAVI[] PROGMEM = "ssl_madavi";
 static constexpr char CFG_KEY_SEND2CSV[] PROGMEM = "send2csv";
-static constexpr char CFG_KEY_HAS_SSD1306[] PROGMEM = "has_ssd1306";
 static constexpr char CFG_KEY_HAS_LED_VALUE[] PROGMEM = "has_led_value";
 static constexpr char CFG_KEY_HAS_LED_CONNECT[] PROGMEM = "has_led_connect";
 static constexpr char CFG_KEY_BRIGHTNESS[] PROGMEM = "brightness";
 static constexpr char CFG_KEY_VALUE_DISPLAYED[] PROGMEM = "value_displayed";
 static constexpr char CFG_KEY_RGPD[] PROGMEM = "rgpd";
-static constexpr char CFG_KEY_DISPLAY_MEASURE[] PROGMEM = "display_measure";
-static constexpr char CFG_KEY_DISPLAY_WIFI_INFO[] PROGMEM = "display_wifi_info";
-static constexpr char CFG_KEY_DISPLAY_LORA_INFO[] PROGMEM = "display_lora_info";
-static constexpr char CFG_KEY_DISPLAY_DEVICE_INFO[] PROGMEM = "display_device_info";
 static constexpr char CFG_KEY_DEBUG[] PROGMEM = "debug";
 static constexpr char CFG_KEY_SENDING_INTERVALL_MS[] PROGMEM = "sending_intervall_ms";
 static constexpr char CFG_KEY_TIME_FOR_WIFI_CONFIG[] PROGMEM = "time_for_wifi_config";
@@ -157,16 +147,11 @@ static constexpr ConfigShapeEntry configShape[] PROGMEM = {
 	{ Config_Type_Bool, 0, CFG_KEY_SEND2MADAVI, &cfg::send2madavi },
 	{ Config_Type_Bool, 0, CFG_KEY_SSL_MADAVI, &cfg::ssl_madavi },
 	{ Config_Type_Bool, 0, CFG_KEY_SEND2CSV, &cfg::send2csv },
-	{ Config_Type_Bool, 0, CFG_KEY_HAS_SSD1306, &cfg::has_ssd1306 },
 	{ Config_Type_Bool, 0, CFG_KEY_HAS_LED_VALUE, &cfg::has_led_value },
 	{ Config_Type_Bool, 0, CFG_KEY_HAS_LED_CONNECT, &cfg::has_led_connect },
 	{ Config_Type_UInt, 0, CFG_KEY_BRIGHTNESS, &cfg::brightness },
 	{ Config_Type_UInt, 0, CFG_KEY_VALUE_DISPLAYED, &cfg::value_displayed },
 	{ Config_Type_Bool, 0, CFG_KEY_RGPD, &cfg::rgpd },
-	{ Config_Type_Bool, 0, CFG_KEY_DISPLAY_MEASURE, &cfg::display_measure },
-	{ Config_Type_Bool, 0, CFG_KEY_DISPLAY_WIFI_INFO, &cfg::display_wifi_info },
-	{ Config_Type_Bool, 0, CFG_KEY_DISPLAY_LORA_INFO, &cfg::display_lora_info },
-	{ Config_Type_Bool, 0, CFG_KEY_DISPLAY_DEVICE_INFO, &cfg::display_device_info },
 	{ Config_Type_UInt, 0, CFG_KEY_DEBUG, &cfg::debug },
 	{ Config_Type_Time, 0, CFG_KEY_SENDING_INTERVALL_MS, &cfg::sending_intervall_ms },
 	{ Config_Type_Time, 0, CFG_KEY_TIME_FOR_WIFI_CONFIG, &cfg::time_for_wifi_config },

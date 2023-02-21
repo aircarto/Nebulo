@@ -1,7 +1,7 @@
 #include <WString.h>
 #include <pgmspace.h>
 
-#define SOFTWARE_VERSION_STR "NebuloLED-V1-012023"
+#define SOFTWARE_VERSION_STR "NebuleAir-V1-012023"
 #define SOFTWARE_VERSION_STR_SHORT "V1-012023"
 String SOFTWARE_VERSION(SOFTWARE_VERSION_STR);
 String SOFTWARE_VERSION_SHORT(SOFTWARE_VERSION_STR_SHORT);
@@ -26,10 +26,6 @@ String SOFTWARE_VERSION_SHORT(SOFTWARE_VERSION_STR_SHORT);
 #include <esp32/sha.h> //pour https ? remplacer par #include <esp32/sha.h> ?  #include "sha/sha_parallel_engine.h" ?
 #include <WebServer.h>
 #include <ESPmDNS.h>
-
-// includes external libraries
-#include "./oledfont.h"
-#include <SSD1306Wire.h>
 
 #define ARDUINOJSON_ENABLE_ARDUINO_STREAM 0
 #define ARDUINOJSON_ENABLE_ARDUINO_PRINT 0
@@ -101,16 +97,11 @@ namespace cfg
 	bool send2csv = SEND2CSV;
 
 	// (in)active displays
-	bool has_ssd1306 = HAS_SSD1306;
 	bool has_led_value = HAS_LED_VALUE;
 	bool has_led_connect = HAS_LED_CONNECT;
 	unsigned brightness = BRIGHTNESS;
 	bool rgpd = RGPD;
 	unsigned value_displayed = VALUE_DISPLAYED;
-	bool display_measure = DISPLAY_MEASURE;
-	bool display_wifi_info = DISPLAY_WIFI_INFO;
-	bool display_lora_info = DISPLAY_LORA_INFO;
-	bool display_device_info = DISPLAY_DEVICE_INFO;
 
 	// API settings
 	bool ssl_madavi = SSL_MADAVI;
@@ -197,18 +188,16 @@ LoggerConfig loggerConfigs[LoggerCount];
 long int sample_count = 0;
 bool bmx280_init_failed = false;
 bool ccs811_init_failed = false;
-bool nebuloled_selftest_failed = false;
+bool nebuleair_selftest_failed = false;
 
 WebServer server(80);
 
 // include JSON config reader
-#include "./nebuloled-cfg.h"
+#include "./nebuleair-cfg.h"
 
 /*****************************************************************
  * Display definitions                                           *
  *****************************************************************/
-
-SSD1306Wire *oled_ssd1306 = nullptr; // as pointer
 
 //LED declarations
 
@@ -847,7 +836,6 @@ bool wificonfig_loop = false;
 uint8_t sntp_time_set;
 
 unsigned long count_sends = 0;
-unsigned long last_display_millis_oled = 0;
 uint8_t next_display_count = 0;
 
 struct struct_wifiInfo
@@ -874,27 +862,6 @@ static String displayGenerateFooter(unsigned int screen_count)
 		display_footer += (i != (next_display_count % screen_count)) ? " . " : " o ";
 	}
 	return display_footer;
-}
-
-/*****************************************************************
- * display values                                                *
- *****************************************************************/
-static void display_debug(const String &text1, const String &text2)
-{
-	debug_outln_info(F("output debug text to displays..."));
-
-	if (cfg::has_ssd1306)
-	{
-		if (oled_ssd1306)
-		{
-			oled_ssd1306->clear();
-			oled_ssd1306->displayOn();
-			oled_ssd1306->setTextAlignment(TEXT_ALIGN_LEFT);
-			oled_ssd1306->drawString(0, 12, text1);
-			oled_ssd1306->drawString(0, 24, text2);
-			oled_ssd1306->display();
-		}
-	}
 }
 
 /*****************************************************************
@@ -1984,17 +1951,6 @@ static void webserver_config_send_body_get(String &page_content)
 	page_content = emptyString;
 
 	page_content = FPSTR(WEB_BR_LF_B);
-	page_content += F(INTL_DISPLAY);
-	page_content += FPSTR(WEB_B_BR);
-	add_form_checkbox(Config_has_ssd1306, FPSTR(INTL_SSD1306));
-	add_form_checkbox(Config_display_measure, FPSTR(INTL_DISPLAY_MEASURES));
-	add_form_checkbox(Config_display_wifi_info, FPSTR(INTL_DISPLAY_WIFI_INFO));
-	add_form_checkbox(Config_display_lora_info, FPSTR(INTL_DISPLAY_LORA_INFO));
-	add_form_checkbox(Config_display_device_info, FPSTR(INTL_DISPLAY_DEVICE_INFO));
-
-	server.sendContent(page_content);
-
-	page_content = FPSTR(WEB_BR_LF_B);
 	page_content += F(INTL_FIRMWARE "</b>&nbsp;");
 
 	page_content += FPSTR(TABLE_TAG_OPEN);
@@ -2236,10 +2192,8 @@ static void webserver_config()
 
 	if (server.method() == HTTP_POST)
 	{
-		display_debug(F("Writing config"), emptyString);
 		if (writeConfig())
 		{
-			display_debug(F("Writing config"), F("and restarting"));
 			sensor_restart();
 		}
 	}
@@ -2460,7 +2414,7 @@ static void webserver_status()
 					 "<thead><tr><th> " INTL_PARAMETER "</th><th>" INTL_VALUE "</th></tr></thead>");
 	String versionHtml(SOFTWARE_VERSION);
 	versionHtml += F("/ST:");
-	versionHtml += String(!nebuloled_selftest_failed);
+	versionHtml += String(!nebuleair_selftest_failed);
 	versionHtml += '/';
 	versionHtml.replace("/", FPSTR(BR_TAG));
 	add_table_row_from_value(page_content, FPSTR(INTL_FIRMWARE), versionHtml);
@@ -2982,10 +2936,8 @@ static void wifiConfig()
 	debug_outln_info_bool(F("AirCarto: "), cfg::send2custom);
 	debug_outln_info_bool(F("AtmoSud: "), cfg::send2custom2);
 	debug_outln_info(FPSTR(DBG_TXT_SEP));
-	debug_outln_info_bool(F("Display: "), cfg::has_ssd1306);
 	debug_outln_info_bool(F("LED value: "), cfg::has_led_value);
 	debug_outln_info_bool(F("LED connection: "), cfg::has_led_connect);
-	debug_outln_info_bool(F("Display Measures: "), cfg::display_measure);
 	debug_outln_info(F("Debug: "), String(cfg::debug));
 	wificonfig_loop = false; // VOIR ICI
 }
@@ -3019,7 +2971,7 @@ gps getGPS(String id)
 	HTTPClient http;
 	http.setTimeout(20 * 1000);
 
-	String urlAirCarto = "http://data.nebulo.fr/get_loc.php?id=";
+	String urlAirCarto = "http://data.nebuleair.fr/get_loc.php?id=";
 	String serverPath = urlAirCarto + id;
 
 	debug_outln_info(F("Call: "), serverPath);
@@ -3063,8 +3015,6 @@ gps getGPS(String id)
 
 static void connectWifi()
 {
-
-	display_debug(F("Connecting to"), String(cfg::wlanssid));
 
 	if (WiFi.getAutoConnect())
 	{
@@ -3273,198 +3223,6 @@ static void send_csv(const String &data)
 	else
 	{
 		debug_outln_error(FPSTR(DBG_TXT_DATA_READ_FAILED));
-	}
-}
-
-/*****************************************************************
- * get data from LoRaWAN downlink payload                                        *
- *****************************************************************/
-
-static void getDataLora(uint8_t array[9]) //BESOIN POUR COORDONNEES GEO?
-{
-
-	union
-	{
-		float f;
-		byte b[4];
-	} u1;
-
-	union
-	{
-		float f;
-		byte b[4];
-	} u2;
-
-	u1.b[0] = array[1];
-	u1.b[1] = array[2];
-	u1.b[2] = array[3];
-	u1.b[3] = array[4];
-
-	u2.b[0] = array[5];
-	u2.b[1] = array[6];
-	u2.b[2] = array[7];
-	u2.b[3] = array[8];
-
-	gps coordinates_lora{"0.00000", "0.00000"};
-
-	coordinates_lora.latitude = String(u1.f, 5);
-	coordinates_lora.longitude = String(u2.f, 5);
-
-	latitude_aircarto = coordinates_lora.latitude;
-	longitude_aircarto = coordinates_lora.longitude;
-
-	if (coordinates_lora.latitude != "0.00000" && coordinates_lora.latitude != "0.00000")
-	{
-		strcpy_P(cfg::latitude, latitude_aircarto.c_str()); //replace the values in the firmware but not in the SPIFFS
-		strcpy_P(cfg::longitude, longitude_aircarto.c_str());
-	}
-
-	Debug.println(u1.f, 5);
-	Debug.println(u2.f, 5);
-}
-
-/*****************************************************************
- * get data from AtmoSud api                                         *
- *****************************************************************/
-float getDataAtmoSud(unsigned int type)
-{
-
-	//https://geoservices.atmosud.org/geoserver/azurjour/wms?&INFO_FORMAT=application/json&REQUEST=GetFeatureInfo&SERVICE=WMS%20&VERSION=1.1.1&WIDTH=1%20&HEIGHT=1&X=1&Y=1&BBOX=5.38658,43.29855,5.38659,43.29856&LAYERS=azurjour:paca-pm2_5-2022-05-23&QUERY_LAYERS=azurjour:paca-pm2_5-2022-05-23&TYPENAME=azurjour:paca-pm10-2022-05-23&srs=EPSG:4326
-	//https://geoservices.atmosud.org/geoserver/azurjour/wms?&INFO_FORMAT=application/json&REQUEST=GetFeatureInfo&SERVICE=WMS &VERSION=1.1.1&WIDTH=1 &HEIGHT=1&X=1&Y=1&BBOX=5.38658,43.29855,5.38659,43.29856&LAYERS=azurjour:paca-pm2_5-2022-05-23&QUERY_LAYERS=azurjour:paca-pm2_5-2022-05-23&TYPENAME=azurjour:paca-pm2_5-2022-05-23&srs=EPSG:4326
-
-	// ATTENTION ATTENDRE FIN DES PROCESSUS LORAWAN AVANT D'APPELER L'API => bool?
-	String sensor_type = "";
-	struct tm timeinfo;
-
-	if (!getLocalTime(&timeinfo))
-	{
-		Debug.println("Failed to obtain time");
-	}
-
-	//timeinfo.tm_mday += 1; // J+1 Change the day in AtmoSud forecast API
-	char date[12];
-	strftime(date, 12, "-%Y-%m-%d", &timeinfo);
-
-	switch (type)
-	{
-	case 0:
-		sensor_type = "multi";
-		break;
-	case 1:
-		sensor_type = "no2";
-		break;
-	case 2:
-		sensor_type = "o3";
-		break;
-	case 3:
-		sensor_type = "pm10";
-		break;
-	case 4:
-		sensor_type = "pm2_5";
-		break;
-	}
-
-	String reponseAPI;
-	StaticJsonDocument<JSON_BUFFER_SIZE2> json;
-	char reponseJSON[JSON_BUFFER_SIZE2];
-
-	HTTPClient http;
-	http.setTimeout(20 * 1000);
-
-	if (sensor_type != "multi")
-	{
-		double longbbox = atof(cfg::longitude) + 0.00001;
-		double latbbox = atof(cfg::latitude) + 0.00001;
-
-		char bufferlong[10];
-		char bufferlat[10];
-
-		sprintf(bufferlong, "%2.5f", longbbox);
-		sprintf(bufferlat, "%2.5f", latbbox);
-		String bbox = String(cfg::longitude) + "," + String(cfg::latitude) + "," + String(bufferlong) + "," + String(bufferlat);
-
-		Debug.println(bbox);
-		String urlAtmo1 = "https://geoservices.atmosud.org/geoserver/azurjour/wms?&INFO_FORMAT=application/json&REQUEST=GetFeatureInfo&SERVICE=WMS%20&VERSION=1.1.1&WIDTH=1%20&HEIGHT=1&X=1&Y=1&BBOX=";
-		String urlAtmo2 = "&LAYERS=azurjour:paca-";
-		String urlAtmo3 = "&QUERY_LAYERS=azurjour:paca-";
-		String urlAtmo4 = "&TYPENAME=azurjour:paca-";
-		String urlAtmo5 = "&srs=EPSG:4326";
-
-		String serverPath = urlAtmo1 + bbox + urlAtmo2 + sensor_type + String(date) + urlAtmo3 + sensor_type + String(date) + urlAtmo4 + sensor_type + String(date) + urlAtmo5;
-
-		debug_outln_info(F("Call: "), serverPath);
-
-		http.begin(serverPath.c_str());
-
-		int httpResponseCode = http.GET();
-
-		if (httpResponseCode > 0)
-		{
-
-			reponseAPI = http.getString();
-			debug_outln_info(F("Response: "), reponseAPI);
-			strcpy(reponseJSON, reponseAPI.c_str());
-
-			DeserializationError error = deserializeJson(json, reponseJSON);
-
-			if (strcmp(error.c_str(), "Ok") == 0)
-			{
-				debug_outln_info(F("Type: "), sensor_type);
-				Debug.println((float)json["features"][0]["properties"]["GRAY_INDEX"]);
-				return (float)json["features"][0]["properties"]["GRAY_INDEX"];
-			}
-			else
-			{
-				Debug.print(F("deserializeJson() failed: "));
-				Debug.println(error.c_str());
-				return -1.0;
-			}
-			http.end();
-		}
-		else
-		{
-			debug_outln_info(F("Failed connecting to Atmo Sud API with error code:"), String(httpResponseCode));
-			return -1.0;
-			http.end();
-		}
-	}
-	else
-	{
-
-		String urlAirCarto = "http://data.nebulo.fr/get_indice_atmo.php?id=";
-		String serverPath = urlAirCarto + esp_chipid;
-
-		debug_outln_info(F("Call: "), serverPath);
-		http.begin(serverPath.c_str());
-
-		int httpResponseCode = http.GET();
-
-		if (httpResponseCode > 0)
-		{
-			reponseAPI = http.getString();
-			debug_outln_info(F("Response: "), reponseAPI);
-			strcpy(reponseJSON, reponseAPI.c_str());
-
-			DeserializationError error = deserializeJson(json, reponseJSON);
-
-			if (strcmp(error.c_str(), "Ok") == 0)
-			{
-				return (float)json["indice"];
-			}
-			else
-			{
-				Debug.print(F("deserializeJson() failed: "));
-				Debug.println(error.c_str());
-				return -1;
-			}
-			http.end();
-		}
-		else
-		{
-			debug_outln_info(F("Failed connecting to AirCarto with error code:"), String(httpResponseCode));
-			return -1;
-			http.end();
-		}
 	}
 }
 
@@ -3808,252 +3566,6 @@ static void fetchSensorNPM(String &s)
 }
 
 /*****************************************************************
- * display values                                                *
- *****************************************************************/
-static void display_values_oled() //COMPLETER LES ECRANS
-{
-	float t_value = -128.0;
-	float h_value = -1.0;
-	float p_value = -1.0;
-	String t_sensor, h_sensor, p_sensor;
-	float pm01_value = -1.0;
-	float pm25_value = -1.0;
-	float pm10_value = -1.0;
-	String pm01_sensor;
-	String pm10_sensor;
-	String pm25_sensor;
-	float nc010_value = -1.0;
-	float nc025_value = -1.0;
-	float nc100_value = -1.0;
-
-	String co2_sensor;
-	String cov_sensor;
-
-	float co2_value = -1.0;
-	float cov_value = -1.0;
-
-	double lat_value = -200.0;
-	double lon_value = -200.0;
-	double alt_value = -1000.0;
-	String display_header;
-	String display_lines[3] = {"", "", ""};
-	uint8_t screen_count = 0;
-	uint8_t screens[12];
-	int line_count = 0;
-	debug_outln_info(F("output values to display..."));
-
-	if (cfg::npm_read)
-	{
-		pm01_value = last_value_NPM_P0;
-		pm10_value = last_value_NPM_P1;
-		pm25_value = last_value_NPM_P2;
-		pm01_sensor = FPSTR(SENSORS_NPM);
-		pm10_sensor = FPSTR(SENSORS_NPM);
-		pm25_sensor = FPSTR(SENSORS_NPM);
-		nc010_value = last_value_NPM_N1;
-		nc100_value = last_value_NPM_N10;
-		nc025_value = last_value_NPM_N25;
-	}
-
-	if (cfg::sds_read)
-	{
-		pm10_sensor = FPSTR(SENSORS_SDS011);
-		pm25_sensor = FPSTR(SENSORS_SDS011);
-		pm10_value = last_value_SDS_P1;
-		pm25_value = last_value_SDS_P2;
-	}
-
-	if (cfg::bmx280_read)
-	{
-		t_sensor = p_sensor = FPSTR(SENSORS_BMP280);
-		t_value = last_value_BMX280_T;
-		p_value = last_value_BMX280_P;
-		if (bmx280.sensorID() == BME280_SENSOR_ID)
-		{
-			h_sensor = t_sensor = FPSTR(SENSORS_BME280);
-			h_value = last_value_BME280_H;
-		}
-	}
-
-	if (cfg::ccs811_read)
-	{
-		cov_value = last_value_CCS811;
-		cov_sensor = FPSTR(SENSORS_CCS811);
-	}
-
-	if (cfg::sds_read && cfg::display_measure)
-	{
-		screens[screen_count++] = 0;
-	}
-	if (cfg::npm_read && cfg::display_measure)
-	{
-		screens[screen_count++] = 1;
-	}
-	if (cfg::bmx280_read && cfg::display_measure)
-	{
-		screens[screen_count++] = 2;
-	}
-
-	if (cfg::ccs811_read && cfg::display_measure)
-	{
-		screens[screen_count++] = 3;
-	}
-	if (cfg::display_wifi_info && cfg::has_wifi)
-	{
-		screens[screen_count++] = 4; // Wifi info
-	}
-	if (cfg::display_device_info)
-	{
-		screens[screen_count++] = 5; // chipID, firmware and count of measurements
-		screens[screen_count++] = 6; // Coordinates
-		if (cfg::npm_read && cfg::display_measure)
-		{
-			screens[screen_count++] = 7; // info NPM
-		}
-	}
-	if (cfg::display_lora_info && cfg::has_lora)
-	{
-		screens[screen_count++] = 8; // Lora info
-	}
-
-	switch (screens[next_display_count % screen_count])
-	{
-	case 0:
-		display_header = FPSTR(SENSORS_SDS011);
-		display_lines[0] = std::move(tmpl(F("PM2.5: {v} µg/m³"), check_display_value(pm25_value, -1, 1, 6)));
-		display_lines[1] = std::move(tmpl(F("PM10: {v} µg/m³"), check_display_value(pm10_value, -1, 1, 6)));
-		display_lines[2] = emptyString;
-		break;
-	case 1:
-		display_header = FPSTR(SENSORS_NPM);
-		display_lines[0] = std::move(tmpl(F("PM1: {v} µg/m³"), check_display_value(pm01_value, -1, 1, 6)));
-		display_lines[1] = std::move(tmpl(F("PM2.5: {v} µg/m³"), check_display_value(pm25_value, -1, 1, 6)));
-		display_lines[2] = std::move(tmpl(F("PM10: {v} µg/m³"), check_display_value(pm10_value, -1, 1, 6)));
-		break;
-	case 2:
-		display_header = t_sensor;
-		if (t_sensor != "")
-		{
-			display_lines[line_count] = "Temp.: ";
-			display_lines[line_count] += check_display_value(t_value, -128, 1, 6);
-			display_lines[line_count++] += " °C";
-		}
-		if (h_sensor != "")
-		{
-			display_lines[line_count] = "Hum.:  ";
-			display_lines[line_count] += check_display_value(h_value, -1, 1, 6);
-			display_lines[line_count++] += " %";
-		}
-		if (p_sensor != "")
-		{
-			display_lines[line_count] = "Pres.: ";
-			display_lines[line_count] += check_display_value(p_value / 100, (-1 / 100.0), 1, 6);
-			display_lines[line_count++] += " hPa";
-		}
-		while (line_count < 3)
-		{
-			display_lines[line_count++] = emptyString;
-		}
-		break;
-	case 3:
-		display_header = FPSTR(SENSORS_CCS811);
-		display_lines[0] = std::move(tmpl(F("COV: {v} ppb"), check_display_value(cov_value, -1, 1, 6)));
-		break;
-	case 4:
-		display_header = F("Wifi info");
-		display_lines[0] = "IP: ";
-		display_lines[0] += WiFi.localIP().toString();
-		display_lines[1] = "SSID: ";
-		display_lines[1] += WiFi.SSID();
-		display_lines[2] = std::move(tmpl(F("Signal: {v} %"), String(calcWiFiSignalQuality(last_signal_strength))));
-		break;
-	case 5:
-		display_header = F("Device Info");
-		display_lines[0] = "ID: ";
-		display_lines[0] += esp_chipid;
-		display_lines[1] = "FW: ";
-		display_lines[1] += SOFTWARE_VERSION;
-		display_lines[2] = F("Measurements: ");
-		display_lines[2] += String(count_sends);
-		break;
-	case 6:
-		display_header = F("Coordinates"); //REVOIR
-		display_lines[0] = "Lat.: ";
-		display_lines[0] += cfg::latitude;
-		display_lines[1] = "Lon.: ";
-		display_lines[1] += cfg::longitude;
-		display_lines[2] = emptyString;
-		break;
-	case 7:
-		display_header = FPSTR(SENSORS_NPM);
-		display_lines[0] = current_state_npm;
-		display_lines[1] = F("T_NPM / RH_NPM");
-		display_lines[2] = current_th_npm;
-		break;
-	case 8:
-		display_header = F("LoRaWAN Info");
-		display_lines[0] = "APPEUI: ";
-		display_lines[0] += cfg::appeui;
-		display_lines[1] = "DEVEUI: ";
-		display_lines[1] += cfg::deveui;
-		display_lines[2] = "APPKEY: ";
-		display_lines[2] += cfg::appkey;
-		break;
-	}
-
-	oled_ssd1306->clear();
-	oled_ssd1306->displayOn();
-	oled_ssd1306->setTextAlignment(TEXT_ALIGN_CENTER);
-	oled_ssd1306->drawString(64, 1, display_header);
-	oled_ssd1306->setTextAlignment(TEXT_ALIGN_LEFT);
-	oled_ssd1306->drawString(0, 16, display_lines[0]);
-	oled_ssd1306->drawString(0, 28, display_lines[1]);
-	oled_ssd1306->drawString(0, 40, display_lines[2]);
-	oled_ssd1306->setTextAlignment(TEXT_ALIGN_CENTER);
-	oled_ssd1306->drawString(64, 52, displayGenerateFooter(screen_count));
-	oled_ssd1306->display();
-
-	yield();
-	next_display_count++;
-}
-
-/*****************************************************************
- * Init LCD/OLED display                                         *
- *****************************************************************/
-static void init_display()
-{
-
-#if defined(ARDUINO_TTGO_LoRa32_v21new)
-		oled_ssd1306 = new SSD1306Wire(0x3c, I2C_PIN_SDA, I2C_PIN_SCL);
-#endif
-
-#if defined(ARDUINO_HELTEC_WIFI_LORA_32_V2)
-		oled_ssd1306 = new SSD1306Wire(0x3c, I2C_SCREEN_SDA, I2C_SCREEN_SCL);
-#endif
-
-#if defined(ARDUINO_ESP32_DEV) and defined(KIT_V1)
-		oled_ssd1306 = new SSD1306Wire(0x3c, I2C_PIN_SDA, I2C_PIN_SCL);
-#endif
-
-#if defined(ARDUINO_ESP32_DEV) and defined(KIT_C)
-		oled_ssd1306 = new SSD1306Wire(0x78, I2C_PIN_SDA, I2C_PIN_SCL);
-#endif
-
-		oled_ssd1306->init();
-		oled_ssd1306->flipScreenVertically(); // ENLEVER ???
-		oled_ssd1306->clear();
-		oled_ssd1306->displayOn();
-		oled_ssd1306->setTextAlignment(TEXT_ALIGN_CENTER);
-		oled_ssd1306->drawString(64, 1, "START");
-		oled_ssd1306->display();
-
-		// reset back to 100k as the OLEDDisplay initialization is
-		// modifying the I2C speed to 400k, which overwhelms some of the
-		// sensors.
-		Wire.setClock(100000);
-		// Wire.setClockStretchLimit(150000);
-}
-/*****************************************************************
  * Init BMP280/BME280                                            *
  *****************************************************************/
 static bool initBMX280(char addr)
@@ -4274,15 +3786,6 @@ static void logEnabledAPIs()
 	}
 }
 
-static void logEnabledDisplays()
-{
-	if (cfg::has_ssd1306)
-
-	{
-		debug_outln_info(F("Show on OLED..."));
-	}
-}
-
 static void setupNetworkTime()
 {
 	// server name ptrs must be persisted after the call to configTime because internally
@@ -4309,7 +3812,7 @@ static unsigned long sendDataToOptionalApis(const String &data)
 	{
 		String data_to_send = data;
 		data_to_send.remove(0, 1);
-		String data_4_custom(F("{\"nebuloledid\": \""));
+		String data_4_custom(F("{\"nebuleairid\": \""));
 		data_4_custom += esp_chipid;
 		data_4_custom += "\", ";
 		data_4_custom += data_to_send;
@@ -4321,7 +3824,7 @@ static unsigned long sendDataToOptionalApis(const String &data)
 	{
 		String data_to_send = data;
 		data_to_send.remove(0, 1);
-		String data_4_custom(F("{\"nebuloledid\": \""));
+		String data_4_custom(F("{\"nebuleairid\": \""));
 		data_4_custom += esp_chipid;
 		data_4_custom += "\", ";
 		data_4_custom += data_to_send;
@@ -4392,18 +3895,6 @@ const lmic_pinmap lmic_pins = {
 	.rxtx = LMIC_UNUSED_PIN,
 	.rst = D0,
 	.dio = {D26, D35, D34}};
-#endif
-
-#if defined(ARDUINO_HELTEC_WIFI_LORA_32_V2)
-const lmic_pinmap lmic_pins = {
-	.nss = D18,
-	.rxtx = LMIC_UNUSED_PIN,
-	.rst = D14,
-	.dio = {/*dio0*/ D26, /*dio1*/ D35, /*dio2*/ D34},
-	.rxtx_rx_active = 0,
-	.rssi_cal = 10,
-	.spi_freq = 8000000 /* 8 MHz */
-};
 #endif
 
 void ToByteArray()
@@ -4804,7 +4295,7 @@ void setup()
 	cfg::initNonTrivials(esp_chipid.c_str());
 	WiFi.persistent(false);
 
-	debug_outln_info(F("NebuloLED: " SOFTWARE_VERSION_STR "/"), String(CURRENT_LANG));
+	debug_outln_info(F("NebuleAir: " SOFTWARE_VERSION_STR "/"), String(CURRENT_LANG));
 
 	init_config();
 
@@ -4813,21 +4304,6 @@ void setup()
 	lorachip = loratest(D26); // test if the LoRa module is connected when LoRaWAN option checked, otherwise freeze...
 	Debug.print("Lora chip connected:");
 	Debug.println(lorachip);
-#endif
-
-#if defined(ARDUINO_TTGO_LoRa32_v21new)
-	Wire.begin(I2C_PIN_SDA, I2C_PIN_SCL);
-	lorachip = true;
-#endif
-
-#if defined(ARDUINO_HELTEC_WIFI_LORA_32_V2)
-	pinMode(OLED_RESET, OUTPUT);
-	digitalWrite(OLED_RESET, LOW); // set GPIO16 low to reset OLED
-	delay(50);
-	digitalWrite(OLED_RESET, HIGH); // while OLED is running, must set GPIO16 in high、
-	Wire.begin(I2C_SCREEN_SDA, I2C_SCREEN_SCL);
-	Wire1.begin(I2C_PIN_SDA, I2C_PIN_SCL);
-	lorachip = true;
 #endif
 
 	if (cfg::npm_read)
@@ -4844,17 +4320,27 @@ void setup()
 		serialSDS.setTimeout((4 * 12 * 1000) / 9600);
 	}
 
-	if (cfg::has_ssd1306)
-	{
-		init_display();
-	}
-
 	if (cfg::has_led_value || cfg::has_led_connect)
 	{
 		debug_outln_info(F("init FastLED"));
 		FastLED.addLeds<WS2812B, LED_PIN, GRB>(leds, LEDS_NB); //swap R and G !  //ATTENTION AU TYPE DE LED
 		FastLED.setBrightness(cfg::brightness);				   //max=255
 		displayColor_value = {0, 0, 0};
+		colorLED_value = CRGB(displayColor_value.R, displayColor_value.G, displayColor_value.B);
+		fill_solid(leds, LEDS_NB, colorLED_value);
+		FastLED.show();
+		delay(500);
+		displayColor_value = {255, 255, 255};
+		colorLED_value = CRGB(displayColor_value.R, displayColor_value.G, displayColor_value.B);
+		fill_solid(leds, LEDS_NB, colorLED_value);
+		FastLED.show();
+		delay(500);
+		displayColor_value = {0, 0, 0};
+		colorLED_value = CRGB(displayColor_value.R, displayColor_value.G, displayColor_value.B);
+		fill_solid(leds, LEDS_NB, colorLED_value);
+		FastLED.show();
+		delay(500);
+		displayColor_value = {255, 255, 255};
 		colorLED_value = CRGB(displayColor_value.R, displayColor_value.G, displayColor_value.B);
 		fill_solid(leds, LEDS_NB, colorLED_value);
 		FastLED.show();
@@ -4876,7 +4362,6 @@ void setup()
 	createLoggerConfigs();
 	logEnabledAPIs();
 	powerOnTestSensors();
-	logEnabledDisplays();
 
 	delay(50);
 
@@ -4885,17 +4370,17 @@ void setup()
 
 	if (cfg::npm_read)
 	{
-		last_display_millis_oled = starttime_NPM = starttime;
+		starttime_NPM = starttime;
 	}
 
 	if (cfg::sds_read)
 	{
-		last_display_millis_oled = starttime_SDS = starttime;
+		starttime_SDS = starttime;
 	}
 
 	if (cfg::ccs811_read)
 	{
-		last_display_millis_oled = starttime_CCS811 = starttime;
+		starttime_CCS811 = starttime;
 	}
 
 	if (cfg::has_lora && lorachip)
@@ -5023,12 +4508,6 @@ void loop()
 	//AJOUTER BMX SAUF SI ON GARDE LE MODELE SC
 
 	//COLORER les led ici avec les last_values.... OU BIEN DANS LE SENDNOW?
-
-	if ((msSince(last_display_millis_oled) > DISPLAY_UPDATE_INTERVAL_MS) && (cfg::has_ssd1306))
-	{
-		display_values_oled();
-		last_display_millis_oled = act_milli;
-	}
 
 	if (cfg::has_wifi && WiFi.waitForConnectResult() == WL_CONNECTED)
 	{
@@ -5222,27 +4701,22 @@ void loop()
 
 		if (cfg::has_led_connect)
 		{
-			// Debug.println(cfg::has_wifi);
-			// Debug.println(cfg::has_lora);
-			// Debug.println(wifi_connection_lost);
-			// Debug.println(lora_connection_lost);
-
 			if ((!cfg::has_wifi && !cfg::has_lora) || (cfg::has_wifi && wifi_connection_lost && !cfg::has_lora) || (cfg::has_lora && lora_connection_lost && !cfg::has_wifi))
 			{
-				colorLED_connect = CRGB(0,0,0);
+				colorLED_connect = CRGB(0, 0, 0);
 			}
 			if (cfg::has_wifi && !wifi_connection_lost)
 			{
-				colorLED_connect = CRGB(255,255,255);
+				colorLED_connect = CRGB(255, 255, 255);
 			}
 			if (cfg::has_lora && (!cfg::has_wifi || (cfg::has_wifi && wifi_connection_lost)) && !lora_connection_lost)
 			{
-				colorLED_connect = CRGB(255,255,0);
+				colorLED_connect = CRGB(255, 255, 0);
 			} //wifi prioritaire
 
 			FastLED.setBrightness(cfg::brightness);
 			fill_solid(&(leds[15]), 1 /*number of leds*/, colorLED_connect);
-			leds[15]= colorLED_connect;
+			leds[15] = colorLED_connect;
 			FastLED.show();
 		}
 

@@ -1,8 +1,8 @@
-# Nebulo V2
+# NebuleAir
 
 ![nebulo_logo](https://aircarto.fr/images/Logo_Nebulo2.png)
 
-New version of the air quality sensor Nebulo developped with [AtmoSud](https://www.atmosud.org/).
+New version of the air quality sensor NebuleAir developped with [AtmoSud](https://www.atmosud.org/).
 
 ## Supported sensors
 * Nova PM SDS011 (PM2.5 and PM10)
